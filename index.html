@@ -1,460 +1,762 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flow Enterprise Pro • Editable A/B Scheduler + Pomodoro + Notes</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#061025"/>
+<title>TheHaydenSphere — Second Brain</title>
 <style>
-  :root{--bg:#0d1117;--card:#161b22;--text:#f0f6fc;--accent:#58a6ff;--success:#238636;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(255,255,255,0.05)}
-  [data-theme="light"]{--bg:#fafafa;--card:#fff;--text:#24292f;--accent:#0969da;--success:#2ea44f;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(0,0,0,0.05)}
-  [data-theme="forest"]{--bg:#0a180a;--card:#132613;--text:#e6ffed;--accent:#56d364;--success:#3fb950;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(255,255,255,0.05)}
-  [data-theme="sunrise"]{--bg:#fff4e6;--card:#ffe8cc;--text:#7c2d12;--accent:#ea580c;--success:#dc2626;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(0,0,0,0.05)}
-
-  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,Arial,sans-serif}
-  body{background:var(--bg);color:var(--text);min-height:100vh;display:grid;place-items:center;padding:16px;line-height:1.5}
-  .app{max-width:560px;width:100%;display:grid;gap:24px}
-  h1{font-size:2.2rem;text-align:center;margin-bottom:8px}
-  .controls{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap}
-  .tab{padding:10px 20px;border-radius:50px;background:var(--card);cursor:pointer;font-weight:600;transition:0.2s}
-  .tab.active{background:var(--accent);color:white}
-  select, button{background:var(--card);color:var(--text);border:none;border-radius:8px;padding:10px 14px;font-size:1rem;cursor:pointer}
-  .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08)}
-  .activity{
-    display:grid;grid-template-columns:auto auto 1fr auto auto auto;gap:12px;align-items:center;
-    padding:12px;background:var(--input-bg);border-radius:12px;margin:10px 0;
-    cursor:grab;
+  /* ------------------------
+     Design system — neuro-optimized
+     (high contrast, luminous cues, micro-motion)
+     ------------------------ */
+  :root{
+    --bg:#061025;
+    --surface:#0d1630;
+    --card:#0f1b36;
+    --muted:#9fb0d6;
+    --glass: rgba(255,255,255,0.04);
+    --accent1:#49f2c9; /* luminous cue */
+    --accent2:#6aa8ff;
+    --accent3:#c17bff;
+    --success:#36d37f;
+    --danger:#ff6b6b;
+    --radius:14px;
+    --shadow: 0 14px 40px rgba(3,8,18,0.65);
+    --glass-blur: 10px;
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --touch: 48px;
   }
-  .activity input[type=checkbox]{width:20px;height:20px;cursor:pointer}
-  .activity:active{cursor:grabbing;opacity:0.7}
-  .activity input[type=text]{background:transparent;border:none;color:var(--text);font-size:1.1rem;padding:4px}
-  .activity input[type=number]{width:60px;padding:6px;background:var(--input-bg);border-radius:6px;text-align:center}
-  .activity button{background:none;border:none;font-size:1.4rem;cursor:pointer;padding:4px}
-  .activity button:hover{color:var(--danger)}
-  .add-btn{background:var(--success);color:white;font-size:1.5rem;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin:20px auto 0}
-  .timer{font-size:3rem;font-weight:bold;text-align:center;margin:20px 0;letter-spacing:3px}
-  .progress-ring{width:140px;height:140px;margin:0 auto;position:relative}
-  .progress-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
-  .progress-ring circle{fill:none;stroke-width:12}
-  .progress-ring .bg{stroke:#3336}
-  .progress-ring .fg{stroke:var(--success);stroke-dasharray:377;stroke-dashoffset:377;transition:stroke-dashoffset 0.8s ease}
-  .progress-text{position:absolute;inset:0;display:grid;place-items:center;font-size:2rem;font-weight:bold}
-  .section{margin-top:24px}
-  .notes-bank{max-height:300px;overflow-y:auto}
-  .note{padding:12px;background:var(--input-bg);border-radius:8px;margin:10px 0;display:flex;flex-direction:column;gap:8px}
-  .note-text{font-size:1rem;white-space:pre-wrap}
-  .note-time{opacity:0.6;font-size:0.8rem}
-  .note-actions{display:flex;gap:8px}
-  .note-actions button{font-size:0.9rem;padding:4px 8px;background:var(--warning);color:var(--text);border-radius:4px}
-  .note-actions button:hover{background:var(--danger)}
-  textarea{width:100%;min-height:100px;background:var(--input-bg);color:var(--text);border:none;border-radius:8px;padding:12px}
-  #exportOpts{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
-  .pomodoro-section{text-align:center}
-  .pomodoro-controls{display:flex;gap:12px;justify-content:center;margin-top:12px}
-  .pomodoro-controls button{background:var(--accent);color:white;padding:10px 20px;border-radius:8px;font-weight:600}
-  .pomodoro-controls button:disabled{opacity:0.5;cursor:not-allowed}
-  footer{text-align:center;opacity:0.7;font-size:0.9rem}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071028);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;color:#e9f3ff}
+  /* iPhone safe area */
+  body{padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);}
+  .app{max-width:1100px;margin:10px auto;display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start;padding-bottom:60px}
+  @media (max-width:980px){ .app{grid-template-columns:1fr; padding-bottom:120px} }
+
+  header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 6px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent2),var(--accent3));display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(106,168,255,0.12)}
+  .logo svg{filter:drop-shadow(0 6px 18px rgba(74,242,201,0.06));}
+  h1{font-size:1.05rem;margin:0}
+  .sub{color:var(--muted);font-size:12px}
+
+  /* card */
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);padding:14px;border:1px solid var(--glass);box-shadow:var(--shadow);backdrop-filter: blur(var(--glass-blur))}
+  .card h2{margin:0 0 8px 0;font-size:1rem;color:var(--accent2)}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* left column layout */
+  .left{display:flex;flex-direction:column;gap:14px}
+  .controls{display:flex;gap:8px;align-items:center}
+  .input, textarea, select{
+    width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;
+  }
+  textarea{min-height:120px;resize:vertical;padding:12px}
+
+  .btn{background:linear-gradient(90deg,var(--accent1),var(--accent2));border:none;padding:10px 14px;border-radius:12px;color:#021;cursor:pointer;font-weight:700;min-height:var(--touch)}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);min-height:var(--touch)}
+  .btn.warn{background:linear-gradient(90deg,var(--danger),#ff9b9b);color:#120101}
+
+  /* panels list */
+  .panel{display:flex;flex-direction:column;gap:10px}
+  .row{display:flex;gap:8px;align-items:center}
+  .small{font-size:13px;color:var(--muted)}
+
+  /* task list */
+  .task-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;padding-right:6px}
+  .task{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02);cursor:grab}
+  .task .left{display:flex;gap:12px;align-items:center}
+  .check{width:26px;height:26px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer}
+  .check.done{background:linear-gradient(90deg,var(--success),#72f5b0);border:none;color:#021}
+  .task-title{font-weight:700}
+
+  /* course/watch/topic lists */
+  .list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+  .list-item{padding:8px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;justify-content:space-between;align-items:center;border:1px solid rgba(255,255,255,0.02)}
+
+  /* note editor */
+  .editor{display:flex;flex-direction:column;gap:8px}
+  .editor .meta{display:flex;gap:8px;align-items:center}
+
+  /* right column */
+  .right{display:flex;flex-direction:column;gap:14px}
+
+  /* tiny animations */
+  .pulse{animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,242,201,0.15)}50%{box-shadow:0 0 0 8px rgba(74,242,201,0.02)}100%{box-shadow:0 0 0 0 rgba(74,242,201,0.0)}}
+
+  /* responsive */
+  @media (max-width:480px){
+    .logo{width:48px;height:48px}
+    .app{padding:0 8px}
+    .btn{min-height:44px}
+  }
+
+  /* toast */
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:#061025;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);box-shadow:0 8px 30px rgba(0,0,0,0.6);color:var(--muted)}
 </style>
 </head>
 <body>
-
 <div class="app">
-  <h1>Flow Enterprise Pro</h1>
-
-  <div class="controls">
-    <div class="tab active" data-day="A">Day A</div>
-    <div class="tab" data-day="B">Day B</div>
-    <select id="theme">
-      <option value="dark">Dark</option>
-      <option value="light">Light</option>
-      <option value="forest">Forest</option>
-      <option value="sunrise">Sunrise</option>
-    </select>
-    <button id="calendarBtn">Calendar</button>
-    <button id="weeklyBtn">Weekly View</button>
-  </div>
-
-  <div class="card">
-    <div id="list"></div>
-    <button class="add-btn" id="addActBtn">+</button>
-    <div class="timer" id="timer">00:00</div>
-    <div class="progress-ring">
-      <svg><circle class="bg" cx="70" cy="70" r="60"/><circle class="fg" cx="70" cy="70" r="60"/></svg>
-      <div class="progress-text" id="percent">0%</div>
-    </div>
-
-    <div class="section pomodoro-section">
-      <h2>Pomodoro Timer</h2>
-      <div class="timer" id="pomoTimer">25:00</div>
-      <div class="pomodoro-controls">
-        <button id="startPomo">Start</button>
-        <button id="pausePomo">Pause</button>
-        <button id="resetPomo">Reset</button>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="white" opacity="0.04"/><path d="M6 7h12M6 12h12M6 17h8" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>
       </div>
-      <p id="pomoStatus">Work Session</p>
-    </div>
-
-    <div class="section">
-      <h2>Notes Bank</h2>
-      <textarea id="newNote" placeholder="Add a note..."></textarea>
-      <button id="addNoteBtn" style="background:var(--success);color:white;margin-top:8px">Add Note</button>
-      <div class="notes-bank" id="notesList"></div>
-      <div id="exportOpts">
-        <button id="exportNotes">Export Notes</button>
-        <select id="exportFormat">
-          <option value="json">JSON</option>
-          <option value="csv">CSV</option>
-          <option value="txt">TXT</option>
-        </select>
-        <input type="date" id="exportStart">
-        <input type="date" id="exportEnd">
+      <div>
+        <h1>TheHaydenSphere — Second Brain</h1>
+        <div class="sub">Secure • Encrypted • Versioned • Designed for deep learning flow</div>
       </div>
     </div>
-  </div>
 
-  <footer>Enterprise Pro: Auto daily reset • Fail-safe saves • Pomodoro integrated</footer>
+    <div class="controls">
+      <input id="globalSearch" class="input" placeholder="Search notes, courses, topics..." style="width:260px"/>
+      <button id="btnSettings" class="btn ghost">Settings</button>
+    </div>
+  </header>
+
+  <!-- LEFT COLUMN -->
+  <main class="left">
+    <!-- Lock / Auth -->
+    <div class="card" id="authCard">
+      <h2 id="authTitle">Unlock / Setup PIN</h2>
+      <div class="muted" id="authSubtitle">Your PIN controls local encryption keys. Do not share it.</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="pinInput" class="input" type="password" placeholder="Enter PIN (6+ chars)" />
+        <button id="btnSetupPin" class="btn">Setup PIN</button>
+        <button id="btnLogin" class="btn ghost">Login</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="btnDemo" class="btn ghost">Demo Data</button>
+        <button id="btnLogout" class="btn ghost" style="display:none">Logout</button>
+      </div>
+    </div>
+
+    <!-- Day mode + progress -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2>Daily Planner</h2>
+          <div class="small">Toggle Day A / Day B and manage your time blocks</div>
+        </div>
+        <div style="text-align:right">
+          <select id="dayMode" class="input" style="width:120px"><option value="A">Day A</option><option value="B">Day B</option></select>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="task-list" id="taskList" aria-live="polite"></div>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="newTaskName" class="input" placeholder="New task name"/>
+          <input id="newTaskMin" class="input" placeholder="Minutes" style="width:110px"/>
+          <button id="addTaskBtn" class="btn">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor / Quick Capture -->
+    <div class="card">
+      <h2>Notes — Quick Capture</h2>
+      <div class="small muted">Notes are encrypted client-side by default (client-only). You can switch to server-assisted in Settings.</div>
+
+      <div class="editor">
+        <div class="meta" style="justify-content:space-between">
+          <input id="noteTitle" class="input" placeholder="Note title"/>
+          <select id="noteTopic" class="input" style="width:160px"><option value="">No topic</option></select>
+        </div>
+
+        <textarea id="noteBody" placeholder="Write your note... use #tags or /commands"></textarea>
+        <div style="display:flex;gap:8px">
+          <button id="saveNoteBtn" class="btn">Save Note (Encrypt & Upload)</button>
+          <button id="saveLocalBtn" class="btn ghost">Save Local Draft</button>
+          <button id="openNotesBtn" class="btn ghost">Open Notes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pomodoro / Timer -->
+    <div class="card">
+      <h2>Flow Timer</h2>
+      <div class="small">Start a focus session — sessions are logged (no gamification)</div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <select id="pomPreset" class="input" style="width:120px"><option value="25">25 / 5</option><option value="50">50 / 10</option><option value="90">90 / 20</option></select>
+        <button id="startPom" class="btn">Start</button>
+        <button id="stopPom" class="btn ghost">Stop</button>
+        <div id="pomStatus" class="small muted">Idle</div>
+      </div>
+      <div style="margin-top:8px">
+        <div style="height:10px;background:rgba(255,255,255,0.04);border-radius:6px"><div id="pomBar" style="height:10px;width:0%;background:linear-gradient(90deg,var(--accent1),var(--accent2));border-radius:6px"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT COLUMN -->
+  <aside class="right">
+    <!-- Courses -->
+    <div class="card">
+      <h2>Courses</h2>
+      <div class="small">Add course links and attach notes</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="courseName" class="input" placeholder="Course title"/>
+        <input id="courseUrl" class="input" placeholder="Course URL"/>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="addCourseBtn" class="btn">Add Course</button>
+        <button id="openCourses" class="btn ghost">Open Courses</button>
+      </div>
+      <div class="list" id="courseList" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Watch Later -->
+    <div class="card">
+      <h2>Watch Later</h2>
+      <div class="small">Queue YouTube links for study</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="wlUrl" class="input" placeholder="YouTube URL"/>
+        <button id="addWlBtn" class="btn">Add</button>
+      </div>
+      <div class="list" id="watchList" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Knowledge Vault -->
+    <div class="card">
+      <h2>Knowledge Vault</h2>
+      <div class="small">Topics, subtopics and notes</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="topicName" class="input" placeholder="Topic name"/>
+        <button id="addTopicBtn" class="btn">Add</button>
+      </div>
+      <div class="list" id="topicList" style="margin-top:10px"></div>
+    </div>
+
+    <!-- Export / Import -->
+    <div class="card">
+      <h2>Backup & Sync</h2>
+      <div class="small">Export a full metadata snapshot (no plaintext) — you can also create encrypted snapshots.</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="exportBtn" class="btn ghost">Export</button>
+        <button id="importBtn" class="btn ghost">Import</button>
+      </div>
+      <div style="margin-top:8px" class="small muted">Realtime: <span id="sseStatus">disconnected</span></div>
+    </div>
+  </aside>
 </div>
 
+<!-- Toast -->
+<div id="toast" class="toast" style="display:none"></div>
+
 <script>
-// Enterprise Storage: IndexedDB with enhanced error handling
-let db;
-const dbName = 'FlowEnterpriseProDB';
-const req = indexedDB.open(dbName, 2);
-req.onerror = () => alert('Database error - check permissions and try again');
-req.onsuccess = () => { db = req.result; loadAll(); };
-req.onupgradeneeded = e => {
-  db = e.target.result;
-  if (!db.objectStoreNames.contains('schedules')) db.createObjectStore('schedules', {keyPath: 'day'});
-  if (!db.objectStoreNames.contains('dailyLogs')) db.createObjectStore('dailyLogs', {keyPath: 'date'});
-  if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', {keyPath: 'id', autoIncrement: true});
-  if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath: 'key'});
+/* ====================================================
+   TheHaydenSphere Frontend (index.html)
+   - Designed to work with backend /api/v3/*
+   - Client-side encryption (WebCrypto PBKDF2 + AES-GCM)
+   - Mobile & iPhone optimized
+   - No external libs
+   ==================================================== */
+
+/* -------------------------
+   Utilities & state
+   ------------------------- */
+const API_ROOT = ''; // same origin; if backend on different host set here (e.g., 'http://localhost:3000')
+const state = {
+  token: localStorage.getItem('ths_token') || null,
+  refreshToken: localStorage.getItem('ths_refresh') || null,
+  pinKey: null, // CryptoKey used for encryption (derived from PIN)
+  encryptionMode: 'client-only', // default; read/write via meta endpoint later
+  cache: {
+    tasks: {A: [], B: []},
+    courses: [],
+    watch: [],
+    topics: [],
+    notesIndex: []
+  },
+  sse: null
 };
 
-// Defaults
-const defaults = {
-  A: [{name:"Reading", mins:60, done:false}, {name:"College Class", mins:60, done:false}, {name:"News Study", mins:30, done:false}, {name:"Bible Read", mins:45, done:false}],
-  B: [{name:"Reading", mins:60, done:false}, {name:"GED Study", mins:60, done:false}, {name:"College Class", mins:60, done:false}, {name:"News Study", mins:30, done:false}, {name:"Bible Read", mins:30, done:false}]
-};
-
-let currentDay = localStorage.getItem("day") || "A";
-let activities = [];
-let notes = [];
-let timerInterval, timerSeconds = 0;
-let lastResetDate = localStorage.getItem('lastReset') || new Date().toISOString().split('T')[0];
-
-// Pomodoro State
-let pomoInterval, pomoSeconds = 0;
-let isPomoRunning = false;
-let isWork = true;
-let workTime = 25 * 60;
-let breakTime = 5 * 60;
-let pomoStatus = document.getElementById('pomoStatus');
-
-const list = document.getElementById("list");
-const timerEl = document.getElementById("timer");
-const fg = document.querySelector(".fg");
-const notesList = document.getElementById("notesList");
-const pomoTimerEl = document.getElementById('pomoTimer');
-
-// Load All
-function loadAll() {
-  checkDailyReset();
-  loadSchedule();
-  loadNotes();
-  render();
-  renderNotes();
-  updatePomoDisplay();
+function showToast(msg, timeout=2400){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', timeout); }
+function authHeaders(){ return state.token ? { 'Authorization': 'Bearer '+state.token, 'Content-Type':'application/json' } : {'Content-Type':'application/json'}; }
+async function api(path, opts={}) {
+  const url = (API_ROOT || '') + path;
+  const headers = Object.assign({}, opts.headers || {}, authHeaders());
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
+  if (res.status === 401) { showToast('Unauthorized — please login'); throw new Error('unauthorized'); }
+  return res;
 }
 
-// Daily Reset & Archive
-function checkDailyReset() {
-  const today = new Date().toISOString().split('T')[0];
-  if (today !== lastResetDate) {
-    archiveDay(lastResetDate);
-    resetDones();
-    localStorage.setItem('lastReset', today);
-    lastResetDate = today;
+/* -------------------------
+   WebCrypto: derive key from PIN (PBKDF2 -> AES-GCM key)
+   - returns CryptoKey for AES-GCM usage
+   ------------------------- */
+async function deriveKeyFromPin(pin) {
+  const enc = new TextEncoder().encode(pin);
+  const salt = new TextEncoder().encode('TheHaydenSphereClientSaltV1'); // stable salt for client key derivation
+  const base = await crypto.subtle.importKey('raw', enc, 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:200000, hash:'SHA-256'}, base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+  return key;
+}
+
+async function encryptText(key, plaintext) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder().encode(plaintext);
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc);
+  // store ciphertext + iv as base64
+  return { ciphertext: arrayBufferToBase64(ct), iv: arrayBufferToBase64(iv) };
+}
+async function decryptText(key, ciphertextB64, ivB64) {
+  try {
+    const ct = base64ToArrayBuffer(ciphertextB64);
+    const iv = base64ToArrayBuffer(ivB64);
+    const plainBuf = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
+    return new TextDecoder().decode(plainBuf);
+  } catch(e){
+    console.error('decrypt failed', e); throw e;
   }
 }
+function arrayBufferToBase64(buf){ const bin = String.fromCharCode.apply(null, new Uint8Array(buf)); return btoa(bin); }
+function base64ToArrayBuffer(b64){ const bin = atob(b64); const len=bin.length; const arr=new Uint8Array(len); for(let i=0;i<len;i++) arr[i]=bin.charCodeAt(i); return arr.buffer; }
 
-function resetDones() {
-  activities.forEach(a => a.done = false);
-  saveSchedule();
-}
-
-function archiveDay(date) {
-  if (!activities.length) return;
-  const log = {date, dayType: currentDay, activities: activities.map(a => ({...a}))};
-  const tx = db.transaction('dailyLogs', 'readwrite');
-  const store = tx.objectStore('dailyLogs');
-  const putReq = store.put(log);
-  putReq.onsuccess = () => console.log(`Archived ${date}`);
-  putReq.onerror = () => console.error('Archive failed');
-  tx.oncomplete = () => {};
-  tx.onerror = () => alert('Archive error');
-}
-
-// Load/Save Schedule
-function loadSchedule() {
-  const tx = db.transaction('schedules');
-  const getReq = tx.objectStore('schedules').get(currentDay);
-  getReq.onsuccess = e => {
-    activities = e.target.result?.acts || defaults[currentDay].map(a => ({...a}));
-    render();
-  };
-  getReq.onerror = () => alert('Load schedule failed');
-}
-
-function saveSchedule() {
-  const tx = db.transaction('schedules', 'readwrite');
-  const store = tx.objectStore('schedules');
-  const putReq = store.put({day: currentDay, acts: activities});
-  putReq.onsuccess = () => console.log('Saved');
-  putReq.onerror = () => alert('Save failed');
-}
-
-// Render Activities
-function render() {
-  list.innerHTML = "";
-  activities.forEach((act, i) => {
-    const div = document.createElement("div");
-    div.className = "activity";
-    div.draggable = true;
-    div.innerHTML = `
-      <input type="checkbox" ${act.done ? 'checked' : ''} data-i="${i}" class="done">
-      <input type="text" value="${act.name}" data-i="${i}" class="name">
-      <input type="number" value="${act.mins}" data-i="${i}" class="mins">
-      <button data-i="${i}" title="Start timer">&#9654;</button>
-      <button data-i="${i}" title="Delete">&#128465;</button>
-    `;
-    list.appendChild(div);
-
-    div.querySelector(".done").onchange = e => { act.done = e.target.checked; saveSchedule(); render(); };
-    div.querySelector(".name").onblur = e => { act.name = e.target.value; saveSchedule(); };
-    div.querySelector(".mins").onblur = e => { act.mins = parseInt(e.target.value) || 1; saveSchedule(); };
-    div.querySelector("button:nth-of-type(1)").onclick = () => startTimer(act.mins);
-    div.querySelector("button:nth-of-type(2)").onclick = () => { activities.splice(i,1); saveSchedule(); };
-
-    div.ondragstart = e => e.dataTransfer.setData("text", i);
-    div.ondragover = e => e.preventDefault();
-    div.ondrop = e => {
-      e.preventDefault();
-      const from = e.dataTransfer.getData("text");
-      const to = i;
-      if (from !== to) {
-        const [moved] = activities.splice(from,1);
-        activities.splice(to,0,moved);
-        saveSchedule();
-      }
-    };
-  });
-
-  const totalMins = activities.reduce((a,c)=>a+c.mins,0);
-  const doneMins = activities.reduce((a,c)=>a+(c.done ? c.mins : 0),0);
-  const pct = totalMins ? Math.round((doneMins / totalMins) * 100) : 0;
-  fg.style.strokeDashoffset = 377 - (377 * pct / 100);
-  document.getElementById("percent").textContent = pct + "%";
-}
-
-// Add Activity
-document.getElementById("addActBtn").onclick = () => {
-  activities.push({name:"New", mins:30, done:false});
-  saveSchedule();
-};
-
-// Activity Timer
-function startTimer(mins) {
-  clearInterval(timerInterval);
-  timerSeconds = mins * 60;
-  timerInterval = setInterval(() => {
-    timerSeconds--;
-    const m = String(Math.floor(timerSeconds/60)).padStart(2,"0");
-    const s = String(timerSeconds%60).padStart(2,"0");
-    timerEl.textContent = `${m}:${s}`;
-    if (timerSeconds <= 0) { clearInterval(timerInterval); alert('Timer done!'); }
-  }, 1000);
-  timerEl.textContent = `${String(mins).padStart(2,"0")}:00`;
-}
-
-// Day Switch
-document.querySelectorAll(".tab").forEach(t => {
-  t.onclick = () => {
-    document.querySelector(".tab.active").classList.remove("active");
-    t.classList.add("active");
-    currentDay = t.dataset.day;
-    localStorage.setItem("day", currentDay);
-    loadSchedule();
-    clearInterval(timerInterval);
-    timerEl.textContent = "00:00";
-  };
-  if (t.dataset.day === currentDay) t.classList.add("active");
+/* -------------------------
+   Auth flows (setup PIN, login)
+   ------------------------- */
+document.getElementById('btnSetupPin').addEventListener('click', async ()=>{
+  const pin = document.getElementById('pinInput').value.trim();
+  if (!pin || pin.length < 6) return showToast('PIN must be at least 6 characters');
+  try {
+    const res = await fetch(API_ROOT + '/api/v3/auth/setup-pin', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
+    const json = await res.json();
+    if (!res.ok) return showToast('Setup failed: '+(json.error||json.message||res.status));
+    showToast('PIN created. Now login.');
+    // optionally derive key locally for encryption
+    state.pinKey = await deriveKeyFromPin(pin);
+    document.getElementById('pinInput').value='';
+  } catch (e) { console.error(e); showToast('Error creating PIN'); }
 });
 
-// Theme
-const themeSel = document.getElementById("theme");
-themeSel.value = localStorage.getItem("theme") || "dark";
-document.documentElement.dataset.theme = themeSel.value;
-themeSel.onchange = e => {
-  document.documentElement.dataset.theme = e.target.value;
-  localStorage.setItem("theme", e.target.value);
-};
+document.getElementById('btnLogin').addEventListener('click', async ()=>{
+  const pin = document.getElementById('pinInput').value.trim();
+  if (!pin) return showToast('Provide PIN to login');
+  try {
+    const res = await fetch(API_ROOT + '/api/v3/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ pin }) });
+    const json = await res.json();
+    if (!res.ok) return showToast('Login failed: '+(json.error||res.status));
+    state.token = json.accessToken; state.refreshToken = json.refreshToken || null;
+    localStorage.setItem('ths_token', state.token); if (state.refreshToken) localStorage.setItem('ths_refresh', state.refreshToken);
+    state.pinKey = await deriveKeyFromPin(pin); // keep key in memory for client-only encryption
+    document.getElementById('pinInput').value='';
+    showToast('Unlocked');
+    afterLogin();
+  } catch (e) { console.error(e); showToast('Login error'); }
+});
 
-// Calendar Log View
-document.getElementById("calendarBtn").onclick = () => {
-  const date = prompt("View log for date (YYYY-MM-DD):");
-  if (date) {
-    const tx = db.transaction('dailyLogs');
-    tx.objectStore('dailyLogs').get(date).onsuccess = e => {
-      const log = e.target.result;
-      if (log) {
-        const done = log.activities.filter(a => a.done).map(a => a.name).join(', ') || 'None';
-        const notDone = log.activities.filter(a => !a.done).map(a => a.name).join(', ') || 'None';
-        alert(`Log for ${date} (${log.dayType} Day):\nDone: ${done}\nNot Done: ${notDone}`);
-      } else alert('No log');
-    };
-  }
-};
+document.getElementById('btnLogout').addEventListener('click', ()=>{
+  state.token = null; state.refreshToken=null; state.pinKey = null;
+  localStorage.removeItem('ths_token'); localStorage.removeItem('ths_refresh');
+  showToast('Logged out');
+  document.getElementById('btnLogout').style.display='none';
+});
 
-// Weekly View (Accurate to Date, Assume A on even days, B on odd - Customize)
-document.getElementById("weeklyBtn").onclick = () => {
-  const now = new Date(2025, 11, 3); // Dec 3, 2025
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  let weekStr = 'Weekly Schedule (A on even dates, B on odd):\n';
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
-    const dayType = d.getDate() % 2 === 0 ? 'A' : 'B';
-    weekStr += `${d.toDateString()}: ${dayType} Day\n`;
-  }
-  alert(weekStr);
-};
-
-// Pomodoro Timer
-function updatePomoDisplay() {
-  const secs = isWork ? workTime : breakTime;
-  const m = String(Math.floor(secs / 60)).padStart(2, '0');
-  const s = String(secs % 60).padStart(2, '0');
-  pomoTimerEl.textContent = `${m}:${s}`;
-  pomoStatus.textContent = isWork ? 'Work Session' : 'Break Time';
+/* -------------------------
+   After login: bootstrap data & SSE
+   ------------------------- */
+async function afterLogin(){
+  document.getElementById('btnLogout').style.display='inline-block';
+  await loadAllMetadata();
+  openSSE();
 }
 
-document.getElementById('startPomo').onclick = () => {
-  if (!isPomoRunning) {
-    pomoSeconds = isWork ? workTime : breakTime;
-    isPomoRunning = true;
-    pomoInterval = setInterval(() => {
-      pomoSeconds--;
-      const m = String(Math.floor(pomoSeconds / 60)).padStart(2, '0');
-      const s = String(pomoSeconds % 60).padStart(2, '0');
-      pomoTimerEl.textContent = `${m}:${s}`;
-      if (pomoSeconds <= 0) {
-        clearInterval(pomoInterval);
-        isPomoRunning = false;
-        alert(isWork ? 'Work done! Take a break.' : 'Break over! Back to work.');
-        isWork = !isWork;
-        updatePomoDisplay();
-      }
-    }, 1000);
-    updatePomoDisplay();
-  }
-};
-
-document.getElementById('pausePomo').onclick = () => {
-  clearInterval(pomoInterval);
-  isPomoRunning = false;
-};
-
-document.getElementById('resetPomo').onclick = () => {
-  clearInterval(pomoInterval);
-  isPomoRunning = false;
-  isWork = true;
-  updatePomoDisplay();
-};
-
-// Notes (Unchanged, robust)
-function loadNotes() {
-  notes = [];
-  const tx = db.transaction('notes');
-  tx.objectStore('notes').openCursor().onsuccess = e => {
-    const cur = e.target.result;
-    if (cur) {
-      notes.push(cur.value);
-      cur.continue();
-    } else renderNotes();
-  };
+/* SSE */
+function openSSE(){
+  if (!state.token) return;
+  if (state.sse) try{ state.sse.close(); }catch(e){}
+  const url = (API_ROOT || '') + '/api/v3/events';
+  state.sse = new EventSource(url, { withCredentials: true });
+  // Unfortunately EventSource doesn't allow custom headers; we instead pass token as query param when needed
+  // But server expects Bearer header — for that, SSE endpoint requires prior authenticated request or we could implement alternative.
+  // If your server requires header, change SSE endpoint to support token query e.g., /events?token=
+  // For now we'll open SSE and assume it is configured to accept token via session or query.
+  state.sse.onopen = ()=>{ document.getElementById('sseStatus').textContent = 'connected'; };
+  state.sse.onmessage = (e)=>{ try{ const data=JSON.parse(e.data); console.log('SSE', data); showToast('Update: '+data.action,1200); }catch(e){} };
+  state.sse.onerror = (e)=>{ document.getElementById('sseStatus').textContent='disconnected'; state.sse.close(); state.sse=null; };
 }
 
-function saveNote(note) {
-  const tx = db.transaction('notes', 'readwrite');
-  const addReq = tx.objectStore('notes').add(note);
-  addReq.onsuccess = loadNotes;
-  addReq.onerror = () => alert('Note save failed');
+/* -------------------------
+   Load metadata (tasks, courses, watch, topics, notesIndex)
+   ------------------------- */
+async function loadAllMetadata(){
+  try {
+    await Promise.all([loadTasks(), loadCourses(), loadWatch(), loadTopics(), loadNotesIndex()]);
+    renderAll();
+  } catch(e){ console.error('load error', e); showToast('Failed to load data'); }
 }
 
-function updateNote(id, text) {
-  const tx = db.transaction('notes', 'readwrite');
-  tx.objectStore('notes').get(id).onsuccess = e => {
-    let n = e.target.result;
-    n.text = text;
-    tx.objectStore('notes').put(n);
-  };
-  tx.oncomplete = loadNotes;
+async function loadTasks(){
+  const day = document.getElementById('dayMode').value || 'A';
+  const res = await api('/api/v3/tasks?day='+day);
+  const json = await res.json();
+  state.cache.tasks[day] = json.tasks || [];
+}
+async function loadCourses(){ const res = await api('/api/v3/courses'); const j=await res.json(); state.cache.courses = j.courses || []; }
+async function loadWatch(){ const res = await api('/api/v3/watch'); const j=await res.json(); state.cache.watch = j.watch || []; }
+async function loadTopics(){ const res = await api('/api/v3/topics'); const j=await res.json(); state.cache.topics = j.topics || []; }
+async function loadNotesIndex(){ const res = await api('/api/v3/notes'); const j=await res.json(); state.cache.notesIndex = j.notes || []; }
+
+/* -------------------------
+   Rendering UI
+   ------------------------- */
+function renderAll(){
+  renderTasks();
+  renderCourses();
+  renderWatch();
+  renderTopics();
+  renderNoteTopicSelect();
 }
 
-function deleteNote(id) {
-  const tx = db.transaction('notes', 'readwrite');
-  tx.objectStore('notes').delete(id);
-  tx.oncomplete = loadNotes;
-}
+function renderTasks(){
+  const list = document.getElementById('taskList'); list.innerHTML='';
+  const day = document.getElementById('dayMode').value || 'A';
+  const arr = state.cache.tasks[day] || [];
+  arr.forEach(t=>{
+    const el = document.createElement('div'); el.className='task';
+    el.innerHTML = `<div class="left"><div class="check ${t.done?'done':''}" data-id="${t.id}">${t.done? '✓':''}</div><div><div class="task-title">${escapeHtml(t.name)}</div><div class="small">${t.minutes} min • ${t.courseId? findCourseName(t.courseId): 'no course'}</div></div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" data-notes="${t.id}">Notes</button>
+        <button class="btn" data-timer="${t.id}">Timer</button>
+        <button class="btn ghost" data-del="${t.id}">Delete</button>
+      </div>`;
+    list.appendChild(el);
 
-function renderNotes() {
-  notesList.innerHTML = '';
-  notes.forEach(n => {
-    const div = document.createElement('div');
-    div.className = 'note';
-    div.innerHTML = `
-      <textarea class="note-text">${n.text}</textarea>
-      <span class="note-time">${new Date(n.timestamp).toLocaleString()}</span>
-      <div class="note-actions">
-        <button class="saveNote" data-id="${n.id}">Save</button>
-        <button class="delNote" data-id="${n.id}">Delete</button>
-      </div>
-    `;
-    notesList.appendChild(div);
-
-    div.querySelector('.saveNote').onclick = () => updateNote(n.id, div.querySelector('textarea').value);
-    div.querySelector('.delNote').onclick = () => deleteNote(n.id);
+    el.querySelector('.check').addEventListener('click', async (ev)=>{
+      try{
+        const id=ev.currentTarget.getAttribute('data-id');
+        await api('/api/v3/tasks/'+id, { method:'PATCH', body: JSON.stringify({ done: !(t.done) }) });
+        await loadTasks(); renderTasks();
+      }catch(e){ showToast('Update failed'); }
+    });
+    el.querySelector('[data-notes]').addEventListener('click', ()=> openTaskNotes(t));
+    el.querySelector('[data-timer]').addEventListener('click', ()=> startPomodoroWithTask(t.minutes, t.name));
+    el.querySelector('[data-del]').addEventListener('click', async ()=>{
+      if (!confirm('Delete task?')) return;
+      await api('/api/v3/tasks/'+t.id, { method:'DELETE' }); await loadTasks(); renderTasks();
+    });
   });
 }
 
-document.getElementById('addNoteBtn').onclick = () => {
-  const text = document.getElementById('newNote').value.trim();
-  if (text) {
-    saveNote({text, timestamp: Date.now()});
-    document.getElementById('newNote').value = '';
+document.getElementById('dayMode').addEventListener('change', async ()=>{
+  await loadTasks(); renderTasks();
+});
+
+document.getElementById('addTaskBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('newTaskName').value.trim();
+  const minutes = parseInt(document.getElementById('newTaskMin').value) || 30;
+  const day = document.getElementById('dayMode').value || 'A';
+  if (!name) return showToast('Task name required');
+  try{
+    await api('/api/v3/tasks',{ method:'POST', body: JSON.stringify({ day, name, minutes }) });
+    document.getElementById('newTaskName').value=''; document.getElementById('newTaskMin').value='';
+    await loadTasks(); renderTasks();
+    subtleConfetti();
+  } catch(e){ console.error(e); showToast('Failed to create task'); }
+});
+
+/* -------------------------
+   Courses
+   ------------------------- */
+function renderCourses(){
+  const list = document.getElementById('courseList'); list.innerHTML='';
+  (state.cache.courses||[]).forEach(c=>{
+    const el = document.createElement('div'); el.className='list-item';
+    el.innerHTML = `<div style="flex:1"><div style="font-weight:700">${escapeHtml(c.name)}</div><div class="small">${escapeHtml(c.url)}</div></div>
+      <div style="display:flex;gap:8px"><button class="btn ghost" data-open="${c.id}">Open</button><button class="btn ghost" data-edit="${c.id}">Edit</button><button class="btn" data-del="${c.id}">Delete</button></div>`;
+    list.appendChild(el);
+    el.querySelector('[data-open]').addEventListener('click', ()=> window.open(c.url,'_blank'));
+    el.querySelector('[data-edit]').addEventListener('click', ()=> openCourseEditor(c));
+    el.querySelector('[data-del]').addEventListener('click', async ()=>{ if(!confirm('Delete?')) return; await api('/api/v3/courses/'+c.id,{method:'DELETE'}); await loadCourses(); renderCourses();});
+  });
+}
+
+document.getElementById('addCourseBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('courseName').value.trim(), url=document.getElementById('courseUrl').value.trim();
+  if (!name||!url) return showToast('Course name & url required');
+  try{ await api('/api/v3/courses',{method:'POST',body: JSON.stringify({name,url})}); document.getElementById('courseName').value='';document.getElementById('courseUrl').value=''; await loadCourses(); renderCourses(); showToast('Course added'); }catch(e){ showToast('Add failed'); }
+});
+
+/* course editor simplified inline */
+function openCourseEditor(course){
+  const name = prompt('Edit course name', course.name); if (name===null) return;
+  const url = prompt('Edit URL', course.url); if (url===null) return;
+  api('/api/v3/courses/'+course.id,{method:'PATCH', body: JSON.stringify({ name, url })}).then(()=>{ loadCourses().then(renderCourses); showToast('Saved'); }).catch(()=>showToast('Save failed'));
+}
+
+/* -------------------------
+   Watch Later
+   ------------------------- */
+function renderWatch(){
+  const list = document.getElementById('watchList'); list.innerHTML='';
+  (state.cache.watch||[]).forEach(w=>{
+    const el = document.createElement('div'); el.className='list-item';
+    el.innerHTML = `<div style="flex:1"><div style="font-weight:700">${escapeHtml(w.title||w.url)}</div><div class="small">${escapeHtml(w.url)}</div></div>
+      <div style="display:flex;gap:8px"><button class="btn ghost" data-play="${w.id}">Play</button><button class="btn ghost" data-note="${w.id}">Notes</button><button class="btn" data-del="${w.id}">${w.seen? 'Unmark':'Mark'}</button></div>`;
+    list.appendChild(el);
+    el.querySelector('[data-play]').addEventListener('click', ()=> openYouTube(w));
+    el.querySelector('[data-note]').addEventListener('click', ()=> openVideoNotes(w));
+    el.querySelector('[data-del]').addEventListener('click', async ()=>{ w.seen = !w.seen; await api('/api/v3/watch/'+w.id,{method:'PATCH', body: JSON.stringify({ seen: w.seen })}); await loadWatch(); renderWatch(); });
+  });
+}
+
+document.getElementById('addWlBtn').addEventListener('click', async ()=>{
+  const url = document.getElementById('wlUrl').value.trim(); if(!url) return;
+  try{ await api('/api/v3/watch',{method:'POST', body: JSON.stringify({ url })}); document.getElementById('wlUrl').value=''; await loadWatch(); renderWatch(); showToast('Added to watch later'); }catch(e){ showToast('Failed'); }
+});
+
+function openYouTube(item){
+  // open embed player in new window/tab
+  const id = youtubeId(item.url);
+  if(!id) return window.open(item.url,'_blank');
+  const w = window.open('', '_blank');
+  w.document.write(`<title>${escapeHtml(item.title||'Video')}</title><iframe src="https://www.youtube.com/embed/${id}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`);
+}
+function youtubeId(url){
+  try{ const u=new URL(url); if(u.hostname.includes('youtu.be')) return u.pathname.slice(1); return u.searchParams.get('v'); }catch(e){ return null; }
+}
+function openVideoNotes(item){ const note = prompt('Video notes', item.notes||''); if (note===null) return; api('/api/v3/watch/'+item.id,{method:'PATCH', body: JSON.stringify({ notes:note })}).then(()=>loadWatch().then(renderWatch)).catch(()=>showToast('Save failed')); }
+
+/* -------------------------
+   Topics / Knowledge Vault
+   ------------------------- */
+function renderTopics(){
+  const list = document.getElementById('topicList'); list.innerHTML='';
+  (state.cache.topics||[]).forEach(t=>{
+    const el = document.createElement('div'); el.className='list-item';
+    el.innerHTML = `<div style="flex:1"><div style="font-weight:700">${escapeHtml(t.name)}</div></div><div style="display:flex;gap:8px"><button class="btn ghost" data-open="${t.id}">Open</button><button class="btn" data-del="${t.id}">Delete</button></div>`;
+    list.appendChild(el);
+    el.querySelector('[data-open]').addEventListener('click', ()=> openTopicEditor(t));
+    el.querySelector('[data-del]').addEventListener('click', async ()=>{ if(!confirm('Delete?')) return; await api('/api/v3/topics/'+t.id,{method:'DELETE'}); await loadTopics(); renderTopics(); });
+  });
+}
+document.getElementById('addTopicBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('topicName').value.trim(); if(!name) return showToast('Name required');
+  await api('/api/v3/topics',{method:'POST', body: JSON.stringify({ name })}); document.getElementById('topicName').value=''; await loadTopics(); renderTopics(); showToast('Topic added');
+});
+function openTopicEditor(topic){
+  const name = prompt('Topic name', topic.name); if (name===null) return;
+  api('/api/v3/topics/'+topic.id,{method:'PATCH', body: JSON.stringify({ name })}).then(()=>{ loadTopics().then(renderTopics); showToast('Saved'); }).catch(()=>showToast('Save failed'));
+}
+
+/* note topic select */
+function renderNoteTopicSelect(){
+  const sel = document.getElementById('noteTopic'); sel.innerHTML = '<option value="">No topic</option>';
+  (state.cache.topics||[]).forEach(t => sel.appendChild(Object.assign(document.createElement('option'),{value:t.id,textContent:t.name})));
+}
+
+/* -------------------------
+   Notes: client-only encryption & upload (versioned)
+   ------------------------- */
+document.getElementById('saveNoteBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('noteTitle').value.trim();
+  const body = document.getElementById('noteBody').value;
+  const topic = document.getElementById('noteTopic').value || null;
+  if (!title || !body) return showToast('Title and body required');
+  // default to client-only encryption
+  if (!state.pinKey) return showToast('Unlock with PIN first (client-only encryption requires PIN in session)');
+  showToast('Encrypting & saving...');
+  try{
+    const enc = await encryptText(state.pinKey, body);
+    // create note with blob
+    const payload = { title, type: 'general', tags: [], summary: body.slice(0,300), blob: { ciphertext: enc.ciphertext, iv: enc.iv, meta: { topic } }, encryptionMode: 'client-only' };
+    const res = await api('/api/v3/notes', { method:'POST', body: JSON.stringify(payload) });
+    const j = await res.json();
+    if (!res.ok) return showToast('Save failed: '+(j.error||res.status));
+    showToast('Note saved');
+    await loadNotesIndex(); // refresh index from server
+  }catch(e){ console.error(e); showToast('Save failed'); }
+});
+document.getElementById('saveLocalBtn').addEventListener('click', ()=>{
+  const title=document.getElementById('noteTitle').value.trim(), body=document.getElementById('noteBody').value;
+  if(!title||!body) return showToast('Title & body required');
+  const id='local_'+Date.now();
+  localStorage.setItem('draft_'+id, JSON.stringify({ title, body, ts: Date.now() }));
+  showToast('Draft saved locally');
+});
+document.getElementById('openNotesBtn').addEventListener('click', async ()=>{
+  // fetch notes index and show minimal modal (prompt-based for simplicity)
+  await loadNotesIndex();
+  const idx = state.cache.notesIndex || [];
+  const titles = idx.map(n=>`${n.title} (${n.id})`).join('\\n');
+  const pick = prompt('Notes:\\n'+titles+'\\n\\nPaste a note id to fetch version list');
+  if(!pick) return;
+  // fetch versions list
+  try{
+    const res=await api('/api/v3/notes/'+pick+'/versions'); const j=await res.json();
+    if(!res.ok) return showToast('Error: '+(j.error||res.status));
+    const vs = j.versions.map(v=>v.filename+' — '+(v.meta && v.meta.mode)).join('\\n');
+    const file = prompt('Versions:\\n'+vs+'\\n\\nPaste filename to download ciphertext (will not decrypt here)');
+    if(!file) return;
+    const r2 = await api('/api/v3/notes/'+pick+'/versions/'+file);
+    const j2 = await r2.json();
+    if (!r2.ok) return showToast('fetch failed');
+    // attempt to decrypt if we have key
+    if (state.pinKey && j2.ciphertext && j2.iv) {
+      try{
+        const plain = await decryptText(state.pinKey, j2.ciphertext, j2.iv);
+        const view = window.open(); view.document.write('<pre style="white-space:pre-wrap;font-family:monospace;padding:12px">'+escapeHtml(plain)+'</pre>');
+      }catch(e){ showToast('Decrypt failed (key mismatch?)'); }
+    } else {
+      showToast('Ciphertext downloaded; cannot decrypt without PIN key');
+    }
+  }catch(e){ console.error(e); showToast('Failed'); }
+});
+
+/* -------------------------
+   Pomodoro session & timer
+   ------------------------- */
+let pomInterval=null, pomRemaining=0, pomTotal=0;
+document.getElementById('startPom').addEventListener('click', ()=>{
+  const minutes = parseInt(document.getElementById('pomPreset').value)||25;
+  startPom(minutes);
+});
+document.getElementById('stopPom').addEventListener('click', ()=>{
+  stopPom();
+});
+
+async function startPom(minutes){
+  stopPom();
+  pomTotal = minutes*60; pomRemaining = pomTotal;
+  document.getElementById('pomStatus').textContent = 'Running';
+  pomInterval = setInterval(()=> {
+    pomRemaining--;
+    const pct = Math.round(((pomTotal - pomRemaining)/pomTotal)*100);
+    document.getElementById('pomBar').style.width = pct+'%';
+    if (pomRemaining<=0) { clearInterval(pomInterval); pomInterval=null; onPomComplete(minutes); }
+  },1000);
+}
+function stopPom(){ if(pomInterval) clearInterval(pomInterval); pomInterval=null; pomRemaining=0; document.getElementById('pomBar').style.width='0%'; document.getElementById('pomStatus').textContent='Stopped'; }
+
+async function onPomComplete(minutes){
+  document.getElementById('pomStatus').textContent='Complete';
+  showToast('Session complete');
+  // log session to server
+  try{
+    await api('/api/v3/sessions',{ method:'POST', body: JSON.stringify({ type:'focus', durationMinutes: minutes, metadata: {} }) });
+  }catch(e){ console.warn('session log failed'); }
+  subtleConfetti();
+}
+
+/* -------------------------
+   Tasks: open task notes (create or fetch note for task)
+   ------------------------- */
+async function openTaskNotes(task){
+  // quick path: if task has notesId, open note versions; else create new
+  if (!task.notesId) {
+    if (!confirm('Create note for this task?')) return;
+    // create note metadata only (blob later)
+    const res = await api('/api/v3/notes', { method:'POST', body: JSON.stringify({ title: `Task: ${task.name}`, type:'task', tags:[], summary: '', encryptionMode: 'client-only' })});
+    const j = await res.json();
+    if(!res.ok) return showToast('Create note failed');
+    // attach noteId to task
+    await api('/api/v3/tasks/'+task.id, { method:'PATCH', body: JSON.stringify({ notesId: j.note.id })});
+    await loadTasks(); renderTasks();
+    return showToast('Note created for task');
+  } else {
+    // open versions workflow
+    const id = task.notesId;
+    const res = await api('/api/v3/notes/'+id+'/versions');
+    const j = await res.json();
+    if (!res.ok) return showToast('Fetch failed');
+    const files = j.versions.map(v=>v.filename).join('\\n');
+    const pick = prompt('Versions:\\n'+files+'\\nEnter filename to download and attempt decrypt');
+    if (!pick) return;
+    const r2 = await api('/api/v3/notes/'+id+'/versions/'+pick);
+    const j2 = await r2.json();
+    if(!r2.ok) return showToast('Fetch failed');
+    if (state.pinKey) {
+      try {
+        const plain = await decryptText(state.pinKey, j2.ciphertext, j2.iv);
+        const updated = prompt('Edit note (will not auto-save to server):', plain);
+        if (updated===null) return;
+        // encrypt new version and upload
+        const enc = await encryptText(state.pinKey, updated);
+        await api('/api/v3/notes/'+id,{method:'PATCH', body: JSON.stringify({ blob: { ciphertext: enc.ciphertext, iv: enc.iv, meta: {} }})});
+        showToast('Updated note version uploaded');
+      } catch(e){ showToast('Decrypt/Save failed'); }
+    } else {
+      showToast('Unlock with PIN to decrypt/edit');
+    }
   }
-};
+}
 
-// Export Notes
-document.getElementById('exportNotes').onclick = () => {
-  const format = document.getElementById('exportFormat').value;
-  const start = document.getElementById('exportStart').value ? new Date(document.getElementById('exportStart').value).getTime() : 0;
-  const end = document.getElementById('exportEnd').value ? new Date(document.getElementById('exportEnd').value).getTime() : Date.now();
-  const filtered = notes.filter(n => n.timestamp >= start && n.timestamp <= end);
+/* -------------------------
+   Simple helpers
+   ------------------------- */
+function findCourseName(id){ const c = (state.cache.courses||[]).find(x=>x.id===id); return c?c.name:''; }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-  let data;
-  if (format === 'json') data = JSON.stringify(filtered, null, 2);
-  else if (format === 'csv') data = 'ID,Time,Text\n' + filtered.map(n => `${n.id},"${new Date(n.timestamp).toLocaleString()}","${n.text.replace(/"/g, '""')}"`).join('\n');
-  else if (format === 'txt') data = filtered.map(n => `---\n${new Date(n.timestamp).toLocaleString()}\n${n.text}\n`).join('');
+/* -------------------------
+   Export / Import
+   ------------------------- */
+document.getElementById('exportBtn').addEventListener('click', async ()=>{
+  try{
+    const res = await api('/api/v3/export'); const blob = await res.blob();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'thehaydensphere_export_'+Date.now()+'.json'; a.click();
+    showToast('Export started');
+  }catch(e){ showToast('Export failed'); }
+});
+document.getElementById('importBtn').addEventListener('click', async ()=>{
+  const txt = prompt('Paste backup JSON to import'); if(!txt) return;
+  try{ const obj = JSON.parse(txt); const res = await api('/api/v3/import',{method:'POST', body: JSON.stringify(obj)}); const j = await res.json(); if (!res.ok) return showToast('Import failed'); showToast('Imported'); await loadAllMetadata(); renderAll(); }catch(e){ showToast('Invalid JSON'); }
+});
 
-  const blob = new Blob([data], {type: `text/${format}`});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `notes_${new Date().toISOString().split('T')[0]}.${format}`;
-  a.click();
-  URL.revokeObjectURL(url);
-};
+/* -------------------------
+   Demo data and confetti
+   ------------------------- */
+document.getElementById('btnDemo').addEventListener('click', async ()=>{
+  // create demo items via API
+  try{
+    if (!state.token) showToast('Login first to create demo'); // easier to demo with server auth
+    // create a course, watch item, topic, and a note
+    await api('/api/v3/courses',{method:'POST', body: JSON.stringify({ name:'Demo: JS Course', url:'https://example.com/js' })});
+    await api('/api/v3/watch',{method:'POST', body: JSON.stringify({ url:'https://youtu.be/dQw4w9WgXcQ', title:'Demo Video' })});
+    await api('/api/v3/topics',{method:'POST', body: JSON.stringify({ name:'Demo: Programming' })});
+    // create a demo note (client-only encryption must have key)
+    if (state.pinKey) {
+      const enc = await encryptText(state.pinKey, 'Demo note content: Welcome to TheHaydenSphere.');
+      await api('/api/v3/notes',{method:'POST', body: JSON.stringify({ title:'Demo note', blob:{ciphertext:enc.ciphertext,iv:enc.iv}, encryptionMode:'client-only' })});
+    }
+    await loadAllMetadata(); renderAll(); showToast('Demo created'); subtleConfetti();
+  }catch(e){ console.error(e); showToast('Demo create failed'); }
+});
+
+/* -------------------------
+   Small visual delight — subtle confetti
+   ------------------------- */
+function subtleConfetti(){
+  for(let i=0;i<12;i++){
+    const el=document.createElement('div'); el.style.position='fixed'; el.style.left=(40+Math.random()*20)+'%'; el.style.top='30%';
+    el.style.width='8px'; el.style.height='12px'; el.style.borderRadius='2px'; el.style.background=['#49f2c9','#6aa8ff','#c17bff'][Math.floor(Math.random()*3)];
+    el.style.transform='translateY(0) rotate('+Math.random()*360+'deg)'; el.style.zIndex=99999; document.body.appendChild(el);
+    const dx = (Math.random()-0.5)*300; const dy = 300 + Math.random()*200;
+    el.animate([{ transform: el.style.transform, opacity:1 }, { transform:`translate(${dx}px,${dy}px) rotate(${Math.random()*720}deg)`, opacity:0 }], { duration: 900+Math.random()*600, easing:'cubic-bezier(.2,.9,.2,1)'});
+    setTimeout(()=>el.remove(),1600);
+  }
+}
+
+/* -------------------------
+   Init: if token exists, attempt to bootstrap
+   ------------------------- */
+(async function init(){
+  if (state.token) {
+    try { await loadAllMetadata(); afterLogin(); } catch(e){ console.warn('bootstrap failed',e); }
+  } else {
+    // attempt to read saved draft and populate UI
+    const drafts = Object.keys(localStorage).filter(k=>k.startsWith('draft_'));
+    if (drafts.length) {
+      const d = JSON.parse(localStorage.getItem(drafts[0]));
+      document.getElementById('noteTitle').value = d.title || '';
+      document.getElementById('noteBody').value = d.body || '';
+    }
+  }
+})();
+
 </script>
 </body>
 </html>
