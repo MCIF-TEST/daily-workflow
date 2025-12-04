@@ -1,784 +1,311 @@
-<!doctype html>
+        <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Ultimate Flow — Changeable Themes (Single-file)</title>
-<meta name="theme-color" content="#2746f0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultimate Flow — Second Brain</title>
+<meta name="theme-color" content="#2746f0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>Flow</text></svg>">
 <style>
-  /* Root CSS variables (will be overridden by selected theme) */
-  :root{
-    --bg: linear-gradient(180deg,#07102a 0%, #07172e 100%);
-    --panel-bg: rgba(255,255,255,0.02);
-    --card-bg: rgba(255,255,255,0.03);
-    --muted: #99a3b5;
-    --text: #e6eef8;
-    --accent: #4f46e5;
-    --accent-2: #7c3aed;
-    --glass-border: rgba(255,255,255,0.04);
+  /* ==== THEME VARIABLES ==== */
+  :root {
+    --bg: linear-gradient(180deg, #0a0e1a 0%, #0d1424 100%);
+    --panel: rgba(255,255,255,0.04);
+    --card: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --text: #e0e7ff;
+    --muted: #94a3b8;
+    --accent: #6366f1;
+    --accent2: #a78bfa;
     --success: #10b981;
-    --danger: #ef4444;
-    --radius: 12px;
-    --shadow: 0 18px 44px rgba(2,6,23,0.6);
-    --glass-blur: 8px;
-    --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --radius: 16px;
+    --shadow: 0 20px 50px rgba(0,0,0,0.5);
+    --blur: 12px;
   }
-  /* Reset & base */
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:var(--font-sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-  a{color:inherit}
-  /* Layout */
-  .app{max-width:1200px;margin:26px auto;padding:18px}
-  header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(0,0,0,0.45)}
-  .logo svg{opacity:0.95}
-  h1{margin:0;font-size:18px;font-weight:700}
-  .subtitle{font-size:13px;color:var(--muted)}
-  .controls{display:flex;gap:8px;align-items:center}
-  .btn{border:0;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;cursor:pointer;font-weight:600;box-shadow:var(--shadow)}
-  .btn.ghost{background:transparent;border:1px solid var(--glass-border);color:var(--muted);box-shadow:none;padding:8px 12px}
-  .btn.small{padding:8px 10px;font-size:13px}
-  .layout{display:grid;grid-template-columns:1fr 380px;gap:18px}
-  .panel{background:var(--panel-bg);border-radius:var(--radius);padding:14px;border:1px solid var(--glass-border);box-shadow:var(--shadow);backdrop-filter: blur(var(--glass-blur))}
-  .row{display:flex;gap:8px;align-items:center}
-  input[type=text], input[type=url], textarea, select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);outline:none}
-  textarea{min-height:140px;resize:vertical}
-  .small{font-size:13px;color:var(--muted)}
-  /* Tasks */
-  .tasks{display:flex;flex-direction:column;gap:10px;margin-top:12px}
-  .task{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid rgba(255,255,255,0.02);transition:transform .12s, box-shadow .12s}
-  .task:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(0,0,0,0.6)}
-  .task-left{display:flex;gap:12px;align-items:center}
-  .checkbox{width:18px;height:18px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
-  .task-title{font-weight:700}
-  .task-meta{font-size:13px;color:var(--muted)}
-  .task-actions{display:flex;gap:8px;align-items:center}
-  select.course-select{padding:8px;border-radius:8px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.03)}
-  /* right column */
-  .secondbrain{display:flex;flex-direction:column;gap:12px}
-  .card{padding:10px;border-radius:10px;background:var(--card-bg);border:1px solid rgba(255,255,255,0.02)}
-  .watch-list,.topic-list,.notes-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;padding-right:6px}
-  .watch-item,.topic-item,.note-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02)}
-  /* progress */
-  .progress{display:flex;align-items:center;gap:12px}
-  .ring{width:72px;height:72px;position:relative}
-  .ring svg{filter:drop-shadow(0 8px 22px rgba(0,0,0,0.6))}
-  .ring .label{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700}
-  /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.55);display:none;align-items:center;justify-content:center;z-index:9999}
-  .overlay.show{display:flex}
-  .modal{width:880px;max-width:94%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03)}
-  .modal h3{margin:0 0 8px 0}
-  .muted{color:var(--muted)}
-  /* theme editor */
-  .theme-palette{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .theme-chip{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-  .color-input{width:42px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);padding:0}
-  /* responsive */
-  @media (max-width:1000px){ .layout{grid-template-columns:1fr} .controls input[type=text]{min-width:120px} }
+
+  /* Light Aura */
+  [data-theme="light"] {
+    --bg: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    --panel: rgba(255,255,255,0.7);
+    --card: rgba(255,255,255,0.85);
+    --border: rgba(0,0,0,0.1);
+    --text: #1e293b;
+    --muted: #64748b;
+    --accent: #4f46e5;
+    --accent2: #7c3aed;
+    --shadow: 0 20px 50px rgba(0,0,0,0.1);
+  }
+
+  /* Purple Haze */
+  [data-theme="purple"]   { --accent:#a855f7; --accent2:#e879f9; --bg:linear-gradient(180deg,#1e0b36 0%,#2d1a4d 100%); }
+  /* Emerald Flow */
+  [data-theme="emerald"]  { --accent:#10b981; --accent2:#34d399; --bg:linear-gradient(180deg,#02261c 0%,#063f2e 100%); }
+  /* Rose Quartz */
+  [data-theme="rose"]     { --accent:#f43f5e; --accent2:#fb7185; --bg:linear-gradient(180deg,#2e0b1a 0%,#4a172e 100%); }
+  /* Retro Vaporwave */
+  [data-theme="vapor"]    { --accent:#ff6ec4; --accent2:#00f2ea; --bg:linear-gradient(180deg,#1a0033 0%,#330066 100%); --text:#fff; }
+
+  /* ==== BASE STYLES ==== */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    min-height:100vh;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 20px 16px;
+  }
+  .app {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .logo {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  h1 { font-size: 1.8rem; font-weight: 800; }
+  .subtitle { color: var(--muted); font-size: 1rem; }
+
+  /* Cards & Panels */
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Buttons */
+  button {
+    cursor: pointer;
+    border: none;
+    padding: 0.65rem 1.2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-2px); }
+  .btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  /* Progress */
+  .progress-bar {
+    height: 10px;
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.6s ease;
+  }
+
+  /* Theme Switcher */
+  .theme-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .theme-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+  }
+  .theme-btn.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent2 + '40');
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    h1 { font-size: 1.5rem; }
+    .app { padding: 16px; }
+  }
 </style>
 </head>
 <body>
 
-<div class="app" id="app">
+<div class="app">
   <header>
     <div class="brand">
-      <div class="logo" aria-hidden>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="4" fill="white" opacity="0.06"/><path d="M7 12h10M7 8h10M7 16h6" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
+      <div class="logo"><svg width="32" viewBox="0 0 0 24 24" fill="white"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/></svg></div>
       <div>
-        <h1>Ultimate Flow — Second Brain</h1>
-        <div class="subtitle">Daily planner • Courses • Notes • Watch Later — themeable</div>
+        <h1>Ultimate Flow</h1>
+        <div class="subtitle">Second Brain • Daily Planner • Themes</div>
       </div>
     </div>
 
-    <div class="controls">
-      <input id="globalSearch" type="text" placeholder="Search (/) — tasks, notes, courses" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)">
-      <button class="btn ghost" id="themeBtn">Theme</button>
-      <button class="btn" id="settingsBtn">Settings</button>
+    <div class="theme-switcher">
+      <div class="theme-btn active" data-theme="dark"    title="Dark Nebula" style="background:#1e1b4b;"></div>
+      <div class="theme-btn" data-theme="light"   title="Light Aura"  style="background:#f1f5f9;"></div>
+      <div class="theme-btn" data-theme="purple"  title="Purple Haze" style="background:#a855f7;"></div>
+      <div class="theme-btn" data-theme="emerald" title="Emerald Flow"style="background:#10b981;"></div>
+      <div class="theme-btn" data-theme="rose"    title="Rose Quartz" style="background:#f43f5e;"></div>
+      <div class="theme-btn" data-theme="vapor"   title="Vaporwave"   style="background:linear-gradient(45deg,#ff6ec4,#00f2ea);"></div>
     </div>
   </header>
 
-  <main class="layout">
-    <section>
-      <div class="panel">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="display:flex;gap:10px;align-items:center">
-              <button class="btn" id="dayA">Day A</button>
-              <button class="btn ghost" id="dayB">Day B</button>
-            </div>
-            <div class="small" style="margin-top:8px">Day cycles — complete tasks, assign courses, open notes</div>
-          </div>
-          <div class="progress">
-            <div class="ring">
-              <svg viewBox="0 0 100 100">
-                <defs><linearGradient id="g"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent-2)"/></linearGradient></defs>
-                <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.06)" stroke-width="8" fill="none"></circle>
-                <circle id="ringFill" cx="50" cy="50" r="40" stroke="url(#g)" stroke-width="8" stroke-linecap="round" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" transform="rotate(-90 50 50)"></circle>
-              </svg>
-              <div class="label" style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700" id="ringLabel">0%</div>
-            </div>
-            <div style="text-align:left">
-              <div class="small">Today</div>
-              <div style="font-weight:700" id="progMeta">0 / 0</div>
-            </div>
-          </div>
-        </div>
+  <div class="card">
+    <h2>Today’s Flow</h2>
+    <p>Complete tasks → assign courses → watch videos → repeat. Everything lives in your browser.</p>
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+    <strong><span id="progress-text">0%</span> – <span id="tasks-done">0</span> / <span id="tasks-total">0</span> tasks</strong>
+  </div>
 
-        <div class="tasks" id="tasksContainer"></div>
-      </div>
+  <div class="grid">
+    <!-- Courses Section -->
+    <div class="card">
+      <h2>Courses & Notes</h2>
+      <p>Add courses, attach notes or YouTube links, then click <strong>Use</strong> to bring them into today’s session.</p>
+      <button class="btn-primary" onclick="addCourse()">Add Course</button>
 
-      <div class="panel" style="margin-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <h3 style="margin:0">Courses</h3>
-            <div class="small">Add your courses and attach notes / videos</div>
-          </div>
-          <div class="small muted">Click 'Use' to assign to Course Study</div>
-        </div>
-        <div id="coursesList" style="margin-top:12px"></div>
+      <div id="courses-list" style="margin-top:1rem;"></div>
+    </div>
 
-        <div class="row" style="margin-top:12px">
-          <input id="courseName" type="text" placeholder="Course title (eg: JS Mastery)" />
-          <input id="courseUrl" type="url" placeholder="Course URL" />
-          <button class="btn" id="addCourse">Add</button>
-        </div>
-      </div>
-    </section>
-
-    <aside class="secondbrain">
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div><h3 style="margin:0">Watch Later</h3><div class="small">Save YouTube links & quick takeaways</div></div>
-          <div class="small muted">Queue</div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <input id="wlTitle" type="text" placeholder="Title (optional)" />
-          <input id="wlUrl" type="url" placeholder="YouTube URL" />
-        </div>
-        <div style="margin-top:8px"><button class="btn" id="addWatch">Save</button></div>
-        <div class="watch-list" id="watchList" style="margin-top:12px"></div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div><h3 style="margin:0">Learning Hub</h3><div class="small">Topics you're learning</div></div>
-          <div class="small muted">Progress</div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <input id="topicName" type="text" placeholder="Topic name" />
-          <select id="topicStatus"><option value="backlog">Backlog</option><option value="learning">Learning</option><option value="mastered">Mastered</option></select>
-          <button class="btn" id="addTopic">Add</button>
-        </div>
-        <div class="topic-list" id="topicList" style="margin-top:12px"></div>
-      </div>
-
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0">Quick Notes</h3><div class="small">Autosave + versioning</div></div><div class="small muted">Local only</div></div>
-        <textarea id="quickNote" placeholder="Jot something..."></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px"><input id="quickTag" placeholder="tag" /><button class="btn" id="saveQuick">Save</button></div>
-        <div class="notes-list" id="notesList" style="margin-top:12px"></div>
-      </div>
-
-      <div class="card" style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div><h3 style="margin:0">Theme</h3><div class="small">Pick a theme or customize</div></div>
-          <div class="small muted">Saved to local</div>
-        </div>
-        <div style="margin-top:10px" class="theme-palette" id="themePalette"></div>
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-          <label class="small muted">Accent</label>
-          <input type="color" id="accentPicker" class="color-input" title="Accent color">
-          <label class="small muted">Accent 2</label>
-          <input type="color" id="accent2Picker" class="color-input" title="Accent 2">
-          <label class="small muted">BG</label>
-          <input type="color" id="bgPicker" class="color-input" title="Background start color">
-          <button class="btn small" id="saveTheme">Save</button>
-        </div>
-        <div style="margin-top:10px" class="small muted">Tip: pick a theme then tweak the accent colors.</div>
-      </div>
-    </aside>
-  </main>
-
-  <footer style="margin-top:18px;text-align:center;font-size:13px;color:var(--muted)">Ultimate Flow — private • autosave • PWA-ready</footer>
-</div>
-
-<!-- Modal overlay -->
-<div class="overlay" id="overlay">
-  <div class="modal" role="dialog" aria-modal="true" id="modal">
-    <h3 id="modalTitle">Edit</h3>
-    <div style="display:flex;gap:8px"><input id="modalTitleInput" placeholder="title / tag" /><input id="modalUrlInput" placeholder="related URL (optional)" /></div>
-    <div style="margin-top:8px"><textarea id="modalBody"></textarea></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-      <div class="small muted" id="modalMeta">Autosave idle</div>
-      <div style="display:flex;gap:8px"><button class="btn ghost" id="modalClose">Close</button><button class="btn" id="modalSave">Save</button></div>
+    <!-- Today's Active Session -->
+    <div class="card">
+      <h2>Active Session</h2>
+      <div id="session-list">Nothing assigned yet. Add a course above!</div>
     </div>
   </div>
 </div>
 
 <script>
-/* -------------------------------------------
-   Vanilla JS app: themeable + autosave + notes
-   - Lightweight IndexedDB for note bodies
-   - localStorage for metadata (lists)
-   - Theme system with presets + color pickers
-   ------------------------------------------- */
-
-/* ---------- Helpers ---------- */
-const $ = (sel, ctx=document) => ctx.querySelector(sel);
-const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
-const ls = (k, v) => v === undefined ? JSON.parse(localStorage.getItem(k) || 'null') : localStorage.setItem(k, JSON.stringify(v));
-const escapeHtml = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-/* ---------- Storage keys ---------- */
-const KEYS = {
-  courses: 'uf_courses_v1',
-  watch: 'uf_watch_v1',
-  topics: 'uf_topics_v1',
-  notesRef: 'uf_notesref_v1',
-  tasks: 'uf_tasks_v1',
-  theme: 'uf_theme_v1'
-};
-
-/* ---------- Default data ---------- */
-function defaultTasks() {
-  return {
-    A: [
-      {name:'Reading',min:60,done:false},
-      {name:'Course Study',min:60,done:false,courseId:null},
-      {name:'News Study',min:30,done:false},
-      {name:'Bible Reading',min:45,done:false}
-    ],
-    B: [
-      {name:'Reading',min:60,done:false},
-      {name:'GED Study',min:60,done:false},
-      {name:'Course Study',min:60,done:false,courseId:null},
-      {name:'News Study',min:30,done:false},
-      {name:'Bible Reading',min:30,done:false}
-    ]
-  };
-}
-
-/* ---------- IndexedDB for notes (bodies + versions) ---------- */
-const IDB_NAME = 'uf_notes_db_v1', STORE = 'notes';
-function openDB(){
-  return new Promise((res, rej) => {
-    const rq = indexedDB.open(IDB_NAME, 1);
-    rq.onupgradeneeded = e => {
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
-    };
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = e => rej(e);
-  });
-}
-async function idbPut(key, value){
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(value, key);
-    tx.oncomplete = () => res(true);
-    tx.onerror = e => rej(e);
-  });
-}
-async function idbGet(key){
-  const db = await openDB();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(STORE,'readonly');
-    const rq = tx.objectStore(STORE).get(key);
-    rq.onsuccess = ()=> res(rq.result);
-    rq.onerror = e=> rej(e);
-  });
-}
-async function idbKeys(){
-  const db = await openDB();
-  return new Promise((res,rej) => {
-    const tx = db.transaction(STORE,'readonly');
-    const rq = tx.objectStore(STORE).getAllKeys();
-    rq.onsuccess = ()=> res(rq.result);
-    rq.onerror = e => rej(e);
-  });
-}
-
-/* ---------- App state (light metadata in localStorage) ---------- */
-let state = {
-  currentDay: 'A',
-  tasks: ls(KEYS.tasks) || defaultTasks(),
-  courses: ls(KEYS.courses) || [],
-  watch: ls(KEYS.watch) || [],
-  topics: ls(KEYS.topics) || [],
-  notesRef: ls(KEYS.notesRef) || []
-};
-
-/* ---------- Theme system ---------- */
-const themes = {
-  'Cyber Glow': {
-    '--bg': 'linear-gradient(180deg,#061024 0%, #08112a 100%)',
-    '--panel-bg': 'rgba(255,255,255,0.02)',
-    '--card-bg': 'rgba(255,255,255,0.02)',
-    '--muted':'#98a7c0',
-    '--text':'#e6eef8',
-    '--accent':'#00d4ff',
-    '--accent-2':'#7c3aed',
-    '--glass-border':'rgba(255,255,255,0.04)'
-  },
-  'Glass': {
-    '--bg': 'linear-gradient(180deg,#f7f9fc 0%, #eceff5 100%)',
-    '--panel-bg': 'rgba(255,255,255,0.6)',
-    '--card-bg': 'rgba(255,255,255,0.7)',
-    '--muted':'#475569',
-    '--text':'#071035',
-    '--accent':'#4f46e5',
-    '--accent-2':'#7c3aed',
-    '--glass-border':'rgba(0,0,0,0.06)'
-  },
-  'Minimal': {
-    '--bg': 'linear-gradient(180deg,#ffffff 0%, #f4f5f7 100%)',
-    '--panel-bg': 'rgba(255,255,255,0.98)',
-    '--card-bg': 'rgba(255,255,255,1)',
-    '--muted':'#6b7280',
-    '--text':'#071033',
-    '--accent':'#111827',
-    '--accent-2':'#374151',
-    '--glass-border':'rgba(0,0,0,0.06)'
-  },
-  'Neon': {
-    '--bg': 'linear-gradient(135deg,#050816 0%, #0b0f1a 100%)',
-    '--panel-bg': 'rgba(14,6,38,0.6)',
-    '--card-bg': 'rgba(14,6,38,0.45)',
-    '--muted':'#9bb3ff',
-    '--text':'#f8fbff',
-    '--accent':'#ff2d95',
-    '--accent-2':'#6a8bff',
-    '--glass-border':'rgba(255,255,255,0.03)'
-  },
-  'Luxury': {
-    '--bg': 'linear-gradient(180deg,#0b0b0c 0%, #101214 100%)',
-    '--panel-bg': 'rgba(255,255,255,0.02)',
-    '--card-bg': 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
-    '--muted':'#b8b0a8',
-    '--text':'#f8f5f2',
-    '--accent':'#f6c85f',
-    '--accent-2':'#d99a2b',
-    '--glass-border':'rgba(255,255,255,0.03)'
-  }
-};
-
-/* Apply theme object to :root */
-function applyTheme(themeObj){
-  const root = document.documentElement;
-  for(const k in themeObj) root.style.setProperty(k, themeObj[k]);
-}
-
-/* Load persisted theme or default */
-const savedTheme = ls(KEYS.theme) || {name:'Cyber Glow', custom:{}};
-if(savedTheme && savedTheme.name && themes[savedTheme.name]) {
-  applyTheme(Object.assign({}, themes[savedTheme.name], savedTheme.custom||{}));
-}
-
-/* Build theme palette UI */
-function buildThemePalette(){
-  const container = $('#themePalette');
-  container.innerHTML = '';
-  Object.keys(themes).forEach(name=>{
-    const btn = document.createElement('div');
-    btn.className = 'theme-chip';
-    btn.textContent = name;
-    btn.addEventListener('click', ()=>{
-      applyTheme(themes[name]);
-      // store selection (no custom picks)
-      ls(KEYS.theme, {name, custom:{}});
-      // update color pickers to match
-      $('#accentPicker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
-      $('#accent2Picker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim());
-      $('#bgPicker').value = rgbToHex(parseBgColor(getComputedStyle(document.documentElement).getPropertyValue('--bg')));
+  // === Theme System ===
+  const themeBtns = document.querySelectorAll('.theme-btn');
+  themeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.documentElement.dataset.theme = btn.dataset.theme;
+      localStorage.setItem('theme', btn.dataset.theme);
+      themeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     });
-    container.appendChild(btn);
   });
-}
 
-/* Utility: convert rgb/hex to hex, and parse bg gradient for a reasonable single color pick */
-function toHex(c){
-  if(!c) return '#000000';
-  c = c.trim();
-  if(c.startsWith('#')) return c;
-  const m = c.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);
-  if(m) return '#' + [1,2,3].map(i=> parseInt(m[i]).toString(16).padStart(2,'0')).join('');
-  return '#000000';
-}
-function rgbToHex(s){ try{ return toHex(s); }catch(e){return '#000000';} }
-function parseBgColor(bg){ /* naive: attempt to extract first hex or rgb from gradient */ const m = bg.match(/#([a-fA-F0-9]{6})/); if(m) return '#'+m[1]; const m2 = bg.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(m2) return 'rgb('+m2[1]+','+m2[2]+','+m2[3]+')'; return '#0b1220'; }
+  // Load saved theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.dataset.theme = savedTheme;
+  document.querySelector(`[data-theme="${savedTheme}"]`).classList.add('active');
 
-/* ---------- UI rendering for tasks, courses, watch, topics, notes ---------- */
-const tasksContainer = $('#tasksContainer');
-function renderTasks(){
-  tasksContainer.innerHTML = '';
-  const list = state.tasks[state.currentDay];
-  list.forEach((t,i)=>{
-    const el = document.createElement('div');
-    el.className = 'task';
-    el.innerHTML = `
-      <div class="task-left">
-        <div class="checkbox" data-index="${i}">${t.done? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
-        <div>
-          <div class="task-title">${escapeHtml(t.name)} ${t.courseId? '— '+(findCourse(t.courseId)?.name||'Course'):''}</div>
-          <div class="task-meta">${t.min} min</div>
-        </div>
-      </div>
-      <div class="task-actions">
-        <select class="course-select" data-assign="${i}" ${t.name.includes('Course Study')? '':'style="display:none"'}><option value="">Assign</option>${state.courses.map(c=>`<option value="${c.id}" ${t.courseId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select>
-        <button class="btn small" data-timer="${i}">Timer</button>
-        <button class="btn ghost small" data-notes="${i}">Notes</button>
-      </div>
-    `;
-    tasksContainer.appendChild(el);
+  // === Data & Rendering ===
+  let courses = JSON.parse(localStorage.getItem('courses-v2') || '[]');
+  let session = JSON.parse(localStorage.getItem('session-v2') || '[]');
 
-    // events
-    el.querySelector('.checkbox').addEventListener('click', ()=>{
-      t.done = !t.done; scheduleSave(); renderTasks(); updateProgress();
+  function saveData() {
+    localStorage.setItem('courses-v2', JSON.stringify(courses));
+    localStorage.setItem('session-v2', JSON.stringify(session));
+    render();
+  }
+
+  function render() {
+    // Courses
+    const cl = document.getElementById('courses-list');
+    cl.innerHTML = courses.length === 0 ? '<p style="color:var(--muted)">No courses yet.</p>' : '';
+    courses.forEach((c, i) => {
+      const div = document.createElement('div');
+      div.style = 'margin:0.8rem 0; padding:0.8rem; background:var(--panel); border-radius:10px;';
+      div.innerHTML = `
+        <strong>${c.name}</strong> ${c.note ? '· ' + c.note : ''}
+        <div style="margin-top:0.5rem;">
+          <button class="btn-primary btn-small" onclick="useCourse(${i})">Use</button>
+          <button class="btn-danger btn-small" style="margin-left:0.5rem;" onclick="deleteCourse(${i})">Delete</button>
+        </div>`;
+      cl.appendChild(div);
     });
-    const sel = el.querySelector('[data-assign]');
-    if(sel) sel.addEventListener('change', e=>{ t.courseId = e.target.value || null; scheduleSave(); renderTasks(); });
-    el.querySelector('[data-timer]').addEventListener('click', ()=> startTimer(t.min, t.name));
-    el.querySelector('[data-notes]').addEventListener('click', ()=> openTaskNotes(i));
-  });
-  updateProgress();
-}
 
-/* courses */
-function renderCourses(){
-  const el = $('#coursesList'); el.innerHTML = '';
-  if(state.courses.length===0) el.innerHTML = '<div class="small muted">No courses yet</div>';
-  state.courses.forEach((c, i)=>{
-    const d = document.createElement('div'); d.className = 'watch-item';
-    d.innerHTML = `<div><div style="font-weight:700">${escapeHtml(c.name)}</div><div class="small">${escapeHtml(c.url)}</div></div>
-                   <div style="display:flex;gap:8px">
-                     <button class="btn ghost small" data-edit="${i}">Edit</button>
-                     <button class="btn ghost small" data-use="${i}">Use</button>
-                     <button class="btn small" data-del="${i}">Delete</button>
-                   </div>`;
-    el.appendChild(d);
-    d.querySelector('[data-edit]').addEventListener('click', ()=> openCourseEditor(i));
-    d.querySelector('[data-use]').addEventListener('click', ()=> { assignCourseToToday(i); });
-    d.querySelector('[data-del]').addEventListener('click', ()=> { if(confirm('Delete course?')){ state.courses.splice(i,1); scheduleSave(); renderCourses(); renderTasks(); } });
-  });
-}
+    // Session
+    const sl = document.getElementById('session-list');
+    sl.innerHTML = session.length === 0 ? '<p style="color:var(--muted)">Nothing in today’s session.</p>' : '';
+    session.forEach((c, i) => {
+      const div = document.createElement('div');
+      div.style = 'margin:0.8rem 0; padding:1rem; background:var(--panel); border-radius:12px;';
+      div.innerHTML = `
+        <strong>${c.name}</strong><br>
+        ${c.note ? '<small>' + c.note + '</small><br>' : ''}
+        <button class="btn-small" style="background:var(--success);color:white;margin-top:0.5rem;" onclick="completeItem(${i})">Complete</button>
+        <button class="btn-danger btn-small" style="margin-left:0.5rem;" onclick="removeFromSession(${i})">Remove</button>`;
+      sl.appendChild(div);
+    });
 
-/* watch */
-function renderWatch(){
-  const list = $('#watchList'); list.innerHTML = '';
-  if(state.watch.length===0) list.innerHTML = '<div class="small muted">No videos saved</div>';
-  state.watch.forEach((w,i)=>{
-    const el = document.createElement('div'); el.className='watch-item';
-    el.innerHTML = `<div><div style="font-weight:700">${escapeHtml(w.title||w.url)}</div><div class="small">${escapeHtml(w.url)}</div></div>
-                    <div style="display:flex;gap:8px">
-                      <button class="btn ghost small" data-open="${i}">Open</button>
-                      <button class="btn ghost small" data-mark="${i}">${w.seen? 'Unmark':'Mark'}</button>
-                      <button class="btn small" data-del="${i}">Del</button>
-                    </div>`;
-    list.appendChild(el);
-    el.querySelector('[data-open]').addEventListener('click', ()=> window.open(w.url,'_blank'));
-    el.querySelector('[data-mark]').addEventListener('click', ()=> { w.seen = !w.seen; scheduleSave(); renderWatch(); });
-    el.querySelector('[data-del]').addEventListener('click', ()=> { state.watch.splice(i,1); scheduleSave(); renderWatch(); });
-  });
-}
-
-/* topics */
-function renderTopics(){
-  const el = $('#topicList'); el.innerHTML = '';
-  if(state.topics.length===0) el.innerHTML = '<div class="small muted">No topics yet</div>';
-  state.topics.forEach((t,i)=>{
-    const e = document.createElement('div'); e.className='topic-item';
-    e.innerHTML = `<div><div style="font-weight:700">${escapeHtml(t.title)}</div><div class="small">${escapeHtml(t.status)}</div></div>
-                   <div style="display:flex;gap:8px">
-                     <button class="btn ghost small" data-open="${i}">Open</button>
-                     <button class="btn small" data-del="${i}">Del</button>
-                   </div>`;
-    el.appendChild(e);
-    e.querySelector('[data-open]').addEventListener('click', ()=> openTopic(i));
-    e.querySelector('[data-del]').addEventListener('click', ()=> { if(confirm('Delete topic?')){ state.topics.splice(i,1); scheduleSave(); renderTopics(); } });
-  });
-}
-
-/* notes (refs shown, bodies in IndexedDB) */
-async function renderNotes(){
-  const list = $('#notesList'); list.innerHTML = '';
-  if(state.notesRef.length===0) list.innerHTML = '<div class="small muted">No quick notes</div>';
-  for(const r of state.notesRef){
-    const el = document.createElement('div'); el.className='note-item';
-    el.innerHTML = `<div><div style="font-weight:700">${escapeHtml(r.tag||'')}</div><div class="small">${escapeHtml(r.summary)}</div></div>
-                    <div style="display:flex;gap:8px">
-                      <button class="btn ghost small" data-open="${r.id}">Open</button>
-                      <button class="btn small" data-del="${r.id}">Del</button>
-                    </div>`;
-    list.appendChild(el);
-    el.querySelector('[data-open]').addEventListener('click', ()=> openNote(r.id));
-    el.querySelector('[data-del]').addEventListener('click', async ()=>{ if(confirm('Delete note?')){ await idbPut('note:'+r.id, null); state.notesRef = state.notesRef.filter(x=>x.id!==r.id); scheduleSave(); renderNotes(); } });
+    // Progress
+    const done = session.filter(i => i.done).length;
+    const total = session.length;
+    const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+    document.getElementById('progress').style.width = percent + '%';
+    document.getElementById('progress-text').textContent = percent + '%';
+    document.getElementById('tasks-done').textContent = done;
+    document.getElementById('tasks-total').textContent = total;
   }
-}
 
-/* ---------- Utility & small actions ---------- */
-function findCourse(id){ return state.courses.find(c=>c.id===id); }
-function assignCourseToToday(idx){ const id = state.courses[idx].id; const list = state.tasks[state.currentDay]; const slot = list.find(t=>t.name.includes('Course Study')); if(slot) { slot.courseId = id; scheduleSave(); renderTasks(); } }
-function startTimer(min,label){
-  openModal('Timer — '+label, ()=> { $('#modalBody').value = `Timer: ${min} minutes`; $('#modalMeta').textContent = 'Running'; });
-  const end = Date.now() + min*60000;
-  const ti = setInterval(()=> {
-    const left = Math.max(0, end - Date.now());
-    const m = Math.floor(left/60000);
-    const s = Math.floor((left%60000)/1000);
-    $('#modalBody').value = `Time remaining: ${m}:${String(s).padStart(2,'0')}`;
-    if(left<=0){ clearInterval(ti); $('#modalMeta').textContent='Done'; navigator.vibrate && navigator.vibrate(200); }
-  }, 1000);
-}
-
-/* ---------- Modal helpers ---------- */
-function openModal(title, onOpen){
-  $('#overlay').classList.add('show');
-  $('#modalTitle').textContent = title;
-  $('#modalBody').value = '';
-  $('#modalTitleInput').value = '';
-  $('#modalUrlInput').value = '';
-  $('#modalMeta').textContent = 'Loaded';
-  if(onOpen) onOpen();
-}
-function closeModal(){ $('#overlay').classList.remove('show'); }
-
-/* ---------- Note & Course editing ---------- */
-async function openNote(id){
-  const data = await idbGet('note:'+id) || {id, tag:'', text:'', versions:[]};
-  openModal('Note', ()=> {
-    $('#modalTitleInput').value = data.tag || '';
-    $('#modalUrlInput').value = '';
-    $('#modalBody').value = data.text || '';
-    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
-    $('#modalSave').onclick = async ()=> {
-      const newText = $('#modalBody').value;
-      data.versions = data.versions || [];
-      data.versions.unshift({ts:Date.now(), text:newText});
-      if(data.versions.length>200) data.versions.pop();
-      data.text = newText;
-      data.tag = $('#modalTitleInput').value;
-      await idbPut('note:'+id, data);
-      const ref = state.notesRef.find(r=>r.id===id);
-      if(ref) ref.summary = newText.substring(0,200);
-      scheduleSave(); renderNotes(); alert('Saved');
-      closeModal();
-    };
-  });
-}
-async function openCourseEditor(idx){
-  const c = state.courses[idx];
-  const data = await idbGet('course:'+c.id) || {notes:'', videos:[], versions:[]};
-  openModal('Course: '+c.name, ()=> {
-    $('#modalTitleInput').value = c.name;
-    $('#modalUrlInput').value = c.url;
-    $('#modalBody').value = data.notes || '';
-    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
-    $('#modalSave').onclick = async ()=> {
-      data.versions = data.versions || [];
-      data.versions.unshift({ts:Date.now(), notes: $('#modalBody').value});
-      if(data.versions.length>200) data.versions.pop();
-      data.notes = $('#modalBody').value;
-      await idbPut('course:'+c.id, data);
-      c.name = $('#modalTitleInput').value || c.name;
-      c.url = $('#modalUrlInput').value || c.url;
-      scheduleSave(); renderCourses(); alert('Course saved'); closeModal();
-    };
-  });
-}
-function openTopic(idx){
-  const t = state.topics[idx];
-  openModal('Topic: '+t.title, ()=> {
-    $('#modalTitleInput').value = (t.tags||[]).join(', ');
-    $('#modalUrlInput').value = t.status;
-    $('#modalBody').value = t.notes || '';
-    $('#modalMeta').textContent = 'topic';
-    $('#modalSave').onclick = async ()=> {
-      t.tags = ($('#modalTitleInput').value||'').split(',').map(x=>x.trim()).filter(Boolean);
-      t.status = $('#modalUrlInput').value || t.status;
-      t.notes = $('#modalBody').value;
-      scheduleSave(); renderTopics(); closeModal(); alert('Saved');
-    };
-  });
-}
-async function openTaskNotes(taskIndex){
-  const key = `task:${state.currentDay}:${taskIndex}`;
-  const data = await idbGet(key) || {notes:'', versions:[]};
-  openModal(state.tasks[state.currentDay][taskIndex].name, ()=> {
-    $('#modalTitleInput').value = '';
-    $('#modalUrlInput').value = '';
-    $('#modalBody').value = data.notes || '';
-    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
-    $('#modalSave').onclick = async ()=> {
-      data.versions = data.versions || [];
-      data.versions.unshift({ts:Date.now(), text: $('#modalBody').value});
-      if(data.versions.length>200) data.versions.pop();
-      data.notes = $('#modalBody').value;
-      await idbPut(key, data);
-      scheduleSave(); alert('Saved'); closeModal();
-    };
-  });
-}
-
-/* ---------- CRUD UI event hookups ---------- */
-$('#addCourse').addEventListener('click', ()=>{
-  const n = $('#courseName').value.trim(); const u = $('#courseUrl').value.trim();
-  if(!n || !u) return alert('Provide name and URL');
-  state.courses.unshift({id:'c'+Date.now(), name:n, url:u});
-  $('#courseName').value=''; $('#courseUrl').value='';
-  scheduleSave(); renderCourses(); renderTasks();
-});
-$('#addWatch').addEventListener('click', ()=> {
-  const t = $('#wlTitle').value.trim(), u = $('#wlUrl').value.trim();
-  if(!u) return alert('Provide a URL');
-  state.watch.unshift({id:'w'+Date.now(), title:t, url:u, seen:false});
-  $('#wlTitle').value=''; $('#wlUrl').value='';
-  scheduleSave(); renderWatch();
-});
-$('#addTopic').addEventListener('click', ()=> {
-  const t = $('#topicName').value.trim(); const s = $('#topicStatus').value;
-  if(!t) return alert('Title required');
-  state.topics.unshift({id:'t'+Date.now(), title:t, status:s, notes:''});
-  $('#topicName').value=''; scheduleSave(); renderTopics();
-});
-$('#saveQuick').addEventListener('click', async ()=> {
-  const txt = $('#quickNote').value.trim(); const tag = $('#quickTag').value.trim();
-  if(!txt) return alert('Note empty');
-  const id = 'n'+Date.now();
-  const obj = {id, tag, text: txt, versions: [{ts:Date.now(), text: txt}]};
-  state.notesRef.unshift({id, tag, summary: txt.substring(0,200)});
-  await idbPut('note:'+id, obj);
-  $('#quickNote').value=''; $('#quickTag').value='';
-  scheduleSave(); renderNotes();
-});
-$('#modalClose').addEventListener('click', ()=> { closeModal(); });
-
-/* day toggles */
-$('#dayA').addEventListener('click', ()=> { state.currentDay='A'; scheduleSave(); renderTasks(); });
-$('#dayB').addEventListener('click', ()=> { state.currentDay='B'; scheduleSave(); renderTasks(); });
-
-/* global search (simple) */
-$('#globalSearch').addEventListener('input', e=> {
-  const q = e.target.value.trim().toLowerCase();
-  // simple filtering: hide tasks that don't match
-  const tasks = document.querySelectorAll('.task');
-  tasks.forEach((el, idx) => {
-    const title = el.querySelector('.task-title').textContent.toLowerCase();
-    el.style.display = title.includes(q) ? 'flex' : 'none';
-  });
-});
-
-/* ---------- Save scheduling & persistence ---------- */
-let saveTimer = null;
-function scheduleSave(){
-  if(saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=> {
-    ls(KEYS.courses, state.courses);
-    ls(KEYS.watch, state.watch);
-    ls(KEYS.topics, state.topics);
-    ls(KEYS.notesRef, state.notesRef);
-    ls(KEYS.tasks, state.tasks);
-    ls(KEYS.theme, window._theme || ls(KEYS.theme) || {name:'Cyber Glow', custom:{}});
-    ls(KEYS.tasks, state.tasks);
-    // no need to persist IDB as we write there directly
-  }, 220);
-}
-
-/* ---------- Progress ring ---------- */
-function updateProgress(){
-  const list = state.tasks[state.currentDay];
-  const total = list.length;
-  const done = list.filter(t=>t.done).length;
-  const pct = total ? Math.round(done/total*100) : 0;
-  const circumference = 2 * Math.PI * 40;
-  const offset = circumference - (pct/100) * circumference;
-  $('#ringLabel').textContent = pct + '%';
-  $('#progMeta').textContent = `${done} / ${total}`;
-  $('#ringFill').style.strokeDashoffset = offset;
-}
-
-/* ---------- Theme pickers & save ---------- */
-buildThemePalette();
-$('#accentPicker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
-$('#accent2Picker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim());
-$('#bgPicker').value = rgbToHex(parseBgColor(getComputedStyle(document.documentElement).getPropertyValue('--bg')));
-
-/* helpers for color conversions */
-function componentToHex(c){ const v = parseInt(c); return v.toString(16).padStart(2,'0'); }
-function rgbStringToHex(s){
-  const m = s.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(!m) return '#000000'; return '#'+componentToHex(m[1])+componentToHex(m[2])+componentToHex(m[3]);
-}
-function rgbToHex(s){ if(!s) return '#000000'; s=s.trim(); if(s.startsWith('#')) return s; if(s.startsWith('rgb')) return rgbStringToHex(s); return '#000000'; }
-
-/* Save custom theme on button */
-$('#saveTheme').addEventListener('click', ()=>{
-  const accent = $('#accentPicker').value;
-  const accent2 = $('#accent2Picker').value;
-  const bg = $('#bgPicker').value;
-  const custom = {'--accent':accent, '--accent-2':accent2, '--bg': `linear-gradient(180deg, ${bg} 0%, ${shadeColor(bg, -8)} 100%)`};
-  applyTheme(Object.assign({}, themes[savedThemeName()] || themes['Cyber Glow'], custom));
-  window._theme = {name: savedThemeName() || 'Custom', custom};
-  ls(KEYS.theme, window._theme);
-  alert('Theme saved locally');
-});
-
-/* helper to get currently selected theme name (none selection returns null) */
-function savedThemeName(){
-  // naive: look at computed --accent and compare
-  const ac = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-  for(const k in themes){
-    if(themes[k]['--accent'] && (themes[k]['--accent'] === ac || rgbToHex(themes[k]['--accent']) === rgbToHex(ac))) return k;
+  function addCourse() {
+    const name = prompt('Course name:');
+    if (!name) return;
+    const note = prompt('Note / YouTube link (optional):');
+    courses.push({ name, note: note || '' });
+    saveData();
   }
-  return null;
-}
 
-/* shade color helper (darken/brighten) */
-function shadeColor(hex, percent){
-  if(!hex.startsWith('#')) return hex;
-  const num = parseInt(hex.slice(1),16);
-  const r = Math.min(255, Math.max(0, ((num >> 16) + Math.round(255*percent/100))));
-  const g = Math.min(255, Math.max(0, (((num >> 8) & 0x00FF) + Math.round(255*percent/100))));
-  const b = Math.min(255, Math.max(0, ((num & 0x0000FF) + Math.round(255*percent/100))));
-  return '#'+ ( (1<<24) + (r<<16) + (g<<8) + b ).toString(16).slice(1);
-}
-
-/* ---------- Utility: hex from rgb for picker init ---------- */
-function parseBgColor(bg){ const m = bg.match(/#([a-fA-F0-9]{6})/); if(m) return '#'+m[1]; const m2 = bg.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(m2) return '#' + [1,2,3].map(i=> parseInt(m2[i]).toString(16).padStart(2,'0')).join(''); return '#07172e'; }
-
-/* ---------- Initial render ---------- */
-function init(){
-  // ensure tasks exist
-  if(!state.tasks || !state.tasks.A) state.tasks = defaultTasks();
-  // render all blocks
-  renderTasks(); renderCourses(); renderWatch(); renderTopics(); renderNotes(); updateProgress();
-}
-init();
-
-/* ---------- Extra UI: Theme modal button ---------- */
-$('#themeBtn').addEventListener('click', ()=> {
-  // focus the small UI area already visible on right - we can animate it or highlight
-  const el = $('#themePalette');
-  el.style.transition = 'transform .28s';
-  el.style.transform = 'scale(1.02)';
-  setTimeout(()=> el.style.transform = 'none', 600);
-});
-
-/* ---------- Expose a few debug methods ---------- */
-window._uf = {
-  state,
-  idbGet, idbPut,
-  save: ()=>{ scheduleSave(); alert('Saved'); },
-  export: async ()=> {
-    const bk = {meta: state, notes:{}};
-    const keys = await idbKeys();
-    for(const k of keys) bk.notes[k] = await idbGet(k);
-    const blob = new Blob([JSON.stringify(bk)], {type:'application/json'});
-    const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = 'uf_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(u);
+  function useCourse(i) {
+    session.push({ ...courses[i], done: false });
+    saveData();
   }
-};
+
+  function deleteCourse(i) {
+    if (confirm('Delete this course?')) {
+      courses.splice(i, 1);
+      saveData();
+    }
+  }
+
+  function completeItem(i) {
+    session[i].done = true;
+    saveData();
+  }
+
+  function removeFromSession(i) {
+    session.splice(i, 1);
+    saveData();
+  }
+
+  // Initial render
+  render();
 </script>
 </body>
 </html>
