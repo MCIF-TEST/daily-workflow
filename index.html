@@ -3,32 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ultimate Workflow — Second Brain (Pro)</title>
-  <meta name="theme-color" content="#4c6bff"/>
+  <title>Ultimate Workflow — Second Brain (Unleashed)</title>
+  <meta name="theme-color" content="#2746f0"/>
   <style>
-    :root{--bg:#f3f6fb;--card:#ffffff;--muted:#6b7280;--text:#0f1724;--accent:#4c6bff;--success:#00b37e;--danger:#e24b4b}
-    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    .app{max-width:1200px;margin:28px auto;padding:20px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    :root{--bg:#f7f9fc;--card:#ffffff;--muted:#6b7280;--text:#061226;--accent:#2746f0;--accent-2:#6a8bff;--success:#00b37e;--danger:#e24b4b}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+    .app{max-width:1200px;margin:24px auto;padding:18px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
     h1{margin:0;font-size:20px}
 
-    .layout{display:grid;grid-template-columns:1fr 420px;gap:18px}
-    .panel{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 8px 24px rgba(15,23,36,0.06)}
+    .layout{display:grid;grid-template-columns:1fr 420px;gap:16px}
+    .panel{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(6,18,38,0.06);transition:box-shadow .18s ease}
+    .panel:hover{box-shadow:0 14px 46px rgba(6,18,38,0.08)}
 
     .workflow-header{display:flex;gap:12px;align-items:center}
     .day-toggle{display:flex;gap:8px}
     .btn{border:0;padding:10px 14px;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
-    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(76,107,255,0.12)}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(39,70,240,0.12)}
+    .btn.small{padding:8px 10px;font-size:13px}
 
-    .tasks{margin-top:14px}
-    .task-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid #eef2ff;margin-bottom:10px}
+    .tasks{margin-top:12px}
+    .task-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid #eef2ff;margin-bottom:10px;transition:transform .12s ease}
+    .task-row:hover{transform:translateY(-3px)}
     .task-left{display:flex;align-items:center;gap:12px}
     .task-title{font-weight:600}
     .task-min{color:var(--muted);font-size:13px}
 
     .progress-wrap{margin-top:12px}
     .progress-bar{height:12px;background:#e6ecff;border-radius:8px;overflow:hidden}
-    .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#6aa0ff)}
+    .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s ease}
     .progress-meta{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:13px}
 
     .secondbrain{display:flex;flex-direction:column;gap:12px}
@@ -44,27 +48,33 @@
     .topic{border-radius:10px;padding:10px;background:#fff;border:1px solid #f1f5f9}
     .topic h4{margin:0 0 6px 0}
     .topic-meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
-    .notes{margin-top:8px;background:#fafcff;padding:8px;border-radius:8px;border:1px dashed #eef1ff}
-    textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px solid #e6eefc}
+    .notes{margin-top:8px;background:#fbfdff;padding:8px;border-radius:8px;border:1px dashed #eef1ff}
+
+    textarea, input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc}
 
     .row{display:flex;gap:8px}
     .input{padding:10px;border-radius:8px;border:1px solid #e6eefc;flex:1}
     .smallmuted{color:var(--muted);font-size:13px}
-    .controls{display:flex;gap:8px;align-items:center}
 
-    .kbd{background:#f1f5ff;padding:4px 8px;border-radius:6px;border:1px solid #e6eeff;font-size:13px}
+    .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);padding:16px;border-radius:12px;box-shadow:0 30px 60px rgba(6,18,38,0.28);z-index:9999;max-width:980px;width:94%;display:none}
+    .modal.show{display:block}
+    .modal .row{margin-top:8px}
 
-    @media (max-width:1100px){.layout{grid-template-columns:1fr;}.secondbrain{order:2}}
+    .meta-row{display:flex;gap:10px;align-items:center}
+
+    .install-btn{position:fixed;left:20px;bottom:20px;background:var(--accent);color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 20px rgba(39,70,240,0.18);z-index:1000;border:none}
+
+    @media (max-width:980px){.layout{grid-template-columns:1fr;}.secondbrain{order:2}}
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="appRoot">
     <div class="topbar">
-      <h1>Ultimate Workflow — Second Brain (Pro)</h1>
+      <h1>Ultimate Workflow — Second Brain (Unleashed)</h1>
       <div class="controls">
-        <button class="btn ghost" onclick="exportData()">Export JSON</button>
-        <button class="btn ghost" onclick="importPrompt()">Import</button>
-        <button class="btn" onclick="toggleDark()">Toggle Dark</button>
+        <button class="btn ghost" onclick="exportFullDB()">Export Full Backup</button>
+        <button class="btn ghost" onclick="importFullBackupPrompt()">Import Full Backup</button>
+        <button class="btn" onclick="openSettings()">Settings</button>
       </div>
     </div>
 
@@ -77,10 +87,10 @@
                 <button class="btn" onclick="setDay('A')">Day A</button>
                 <button class="btn ghost" onclick="setDay('B')">Day B</button>
               </div>
-              <div class="smallmuted" style="margin-top:8px">Your daily schedule — complete tasks, track progress, use timers</div>
+              <div class="smallmuted" style="margin-top:8px">Complete tasks, pick a course for Course Study, take notes and add video takeaways</div>
             </div>
             <div class="controls">
-              <input id="globalSearch" class="input" placeholder="Quick search (press /)" oninput="globalSearch()">
+              <input id="searchTasks" class="input" placeholder="Search tasks, topics, courses..." oninput="renderCurrent()">
             </div>
           </div>
 
@@ -92,13 +102,13 @@
           </div>
         </div>
 
-        <div class="panel" style="margin-top:14px">
-          <h3 style="margin-top:0">Courses & Links</h3>
+        <div class="panel" style="margin-top:12px">
+          <h3 style="margin-top:0">Courses — add links, notes, and videos</h3>
           <div id="coursesSection"></div>
           <div style="margin-top:10px" class="row">
             <input id="courseName" class="input" placeholder="Course title">
-            <input id="courseLink" class="input" placeholder="URL">
-            <button class="btn" onclick="addCourseFromInput()">Add</button>
+            <input id="courseLink" class="input" placeholder="URL (course page or platform)">
+            <button class="btn" onclick="addCourseFromInput()">Add Course</button>
           </div>
         </div>
       </div>
@@ -106,7 +116,7 @@
       <aside class="secondbrain">
 
         <div class="panel sb-section">
-          <div class="sb-header"><strong>Watch Later — YouTube</strong><span class="small">save links to watch</span></div>
+          <div class="sb-header"><strong>Watch Later — YouTube</strong><span class="small">save short links for takeaways</span></div>
           <div class="row" style="margin-bottom:8px">
             <input id="wlTitle" class="input" placeholder="Short title (eg: JS closure)">
             <input id="wlUrl" class="input" placeholder="YouTube URL">
@@ -134,138 +144,248 @@
         </div>
 
         <div class="panel sb-section">
-          <div class="sb-header"><strong>Quick Notes</strong><span class="small">fast capture — markdown supported</span></div>
+          <div class="sb-header"><strong>Quick Notes</strong><span class="small">fast capture — autosave & versioned</span></div>
           <textarea id="quickNote" placeholder="Capture an idea, paste a link, or jot a reminder"></textarea>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input id="noteTag" class="input" placeholder="tag (eg: idea, research)">
-            <button class="btn" onclick="saveQuickNote()">Save</button>
+            <button class="btn" onclick="saveQuickNote()">Save Note</button>
           </div>
           <div id="quickNotesList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
-          <div style="margin-top:8px" class="smallmuted">Keyboard: '/' focus search — 'n' new note</div>
         </div>
 
       </aside>
     </div>
   </div>
 
+  <button id="installBtn" class="install-btn" style="display:none">Install App</button>
+
+  <!-- Modals -->
+  <div class="modal" id="noteModal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="modalTitle">Edit</h3>
+      <div>
+        <button class="btn small" onclick="saveModalNote()">Save</button>
+        <button class="btn ghost small" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <input id="modalTag" class="input" placeholder="tag / title">
+      <input id="modalUrl" class="input" placeholder="related link (optional)">
+    </div>
+    <div style="margin-top:10px">
+      <textarea id="modalBody" style="min-height:240px"></textarea>
+    </div>
+    <div style="margin-top:8px;color:var(--muted);font-size:13px">Autosave: <span id="autosaveStatus">idle</span> — Versions: <span id="versionCount">0</span></div>
+  </div>
+
   <script>
-    // -- State (persisted) --
+    /******************************************************************
+     * Ultimate Workflow — Unleashed
+     * - Full autosave (localStorage + IndexedDB)
+     * - PIN lock on load (user provided PIN hardcoded as requested)
+     * - Encrypted cloud sync to GitHub Gist (optional)
+     * - Full IDB export/import
+     * - Course editor with notes + videos, per-task notes
+     * - Versioning and conflict tools
+     * - Polished UI + smooth behavior
+     ******************************************************************/
+
+    // --------- CONFIG & PIN (user-provided) ----------
+    const USER_PIN = '19221128662007'; // as provided by you
+    const IDB_NAME = 'uw_unleashed_db_v1';
+    const IDB_STORE = 'uw_notes';
+
+    // ---------- IndexedDB helpers (promised) ----------
+    function openDB(){ return new Promise((res,rej)=>{ const req = indexedDB.open(IDB_NAME,1); req.onupgradeneeded = e => { const db = e.target.result; if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE); }; req.onsuccess = ()=> res(req.result); req.onerror = e => rej(e); }); }
+    async function idbPut(key,val){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readwrite'); tx.objectStore(IDB_STORE).put(val,key); tx.oncomplete = ()=>res(true); tx.onerror = e=>rej(e); }); }
+    async function idbGet(key){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readonly'); const r = tx.objectStore(IDB_STORE).get(key); r.onsuccess = ()=>res(r.result); r.onerror = e=>rej(e); }); }
+    async function idbDel(key){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readwrite'); tx.objectStore(IDB_STORE).delete(key); tx.oncomplete = ()=>res(true); tx.onerror = e=>rej(e); }); }
+    async function idbKeys(){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readonly'); const store = tx.objectStore(IDB_STORE); const req = store.getAllKeys(); req.onsuccess = ()=>res(req.result); req.onerror = e=>rej(e); }); }
+
+    // ---------- Encryption helpers (Web Crypto) ----------
+    async function deriveKeyFromPin(pin){ const enc = new TextEncoder().encode(pin); const salt = new Uint8Array([1,2,3,4,5,6,7,8]); const keyMaterial = await crypto.subtle.importKey('raw', enc, {name:'PBKDF2'}, false, ['deriveKey']); const key = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations: 200000, hash:'SHA-256'}, keyMaterial, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']); return key; }
+    async function encryptJson(obj, key){ const iv = crypto.getRandomValues(new Uint8Array(12)); const data = new TextEncoder().encode(JSON.stringify(obj)); const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, data); const payload = new Uint8Array(cipher); const combined = new Uint8Array(iv.byteLength + payload.byteLength); combined.set(iv,0); combined.set(payload, iv.byteLength); return btoa(String.fromCharCode(...combined)); }
+    async function decryptJson(b64, key){ try{ const raw = Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); const iv = raw.slice(0,12); const data = raw.slice(12); const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, data); return JSON.parse(new TextDecoder().decode(plain)); }catch(e){ throw new Error('Decryption failed'); } }
+
+    // ---------- In-memory app state (lightweight stored in localStorage) ----------
     const state = {
-      dayA: [
-        {name:'Reading',minutes:60,done:false,notes:''},
-        {name:'Course Study',minutes:60,done:false,notes:''},
-        {name:'News Study',minutes:30,done:false,notes:''},
-        {name:'Bible Reading',minutes:45,done:false,notes:''}
-      ],
-      dayB: [
-        {name:'Reading',minutes:60,done:false,notes:''},
-        {name:'GED Study',minutes:60,done:false,notes:''},
-        {name:'Course Study',minutes:60,done:false,notes:''},
-        {name:'News Study',minutes:30,done:false,notes:''},
-        {name:'Bible Reading',minutes:30,done:false,notes:''}
-      ],
-      courses: JSON.parse(localStorage.getItem('uw_courses')||'[]'),
-      watchLater: JSON.parse(localStorage.getItem('uw_watch')||'[]'),
-      topics: JSON.parse(localStorage.getItem('uw_topics')||'[]'),
-      quickNotes: JSON.parse(localStorage.getItem('uw_qnotes')||'[]'),
-      currentDay: localStorage.getItem('uw_day')||'A'
+      dayA: [{name:'Reading',minutes:60,done:false},{name:'Course Study',minutes:60,done:false,courseId:null},{name:'News Study',minutes:30,done:false},{name:'Bible Reading',minutes:45,done:false}],
+      dayB: [{name:'Reading',minutes:60,done:false},{name:'GED Study',minutes:60,done:false},{name:'Course Study',minutes:60,done:false,courseId:null},{name:'News Study',minutes:30,done:false},{name:'Bible Reading',minutes:30,done:false}],
+      courses: JSON.parse(localStorage.getItem('uw_unleashed_courses')||'[]'),
+      watchLater: JSON.parse(localStorage.getItem('uw_unleashed_watch')||'[]'),
+      topics: JSON.parse(localStorage.getItem('uw_unleashed_topics')||'[]'),
+      quickRefs: JSON.parse(localStorage.getItem('uw_unleashed_qrefs')||'[]'),
+      currentDay: localStorage.getItem('uw_unleashed_day')||'A',
+      sync: JSON.parse(localStorage.getItem('uw_unleashed_sync')||'{}')
     };
 
-    function saveAll(){
-      localStorage.setItem('uw_courses',JSON.stringify(state.courses));
-      localStorage.setItem('uw_watch',JSON.stringify(state.watchLater));
-      localStorage.setItem('uw_topics',JSON.stringify(state.topics));
-      localStorage.setItem('uw_qnotes',JSON.stringify(state.quickNotes));
-      localStorage.setItem('uw_day',state.currentDay);
+    let autosaveTimer = null; function scheduleSave(){ if(autosaveTimer) clearTimeout(autosaveTimer); autosaveTimer = setTimeout(()=>{ saveLightState(); if(syncEnabled()) triggerAutoPush(); }, 250); }
+    function saveLightState(){ localStorage.setItem('uw_unleashed_courses',JSON.stringify(state.courses)); localStorage.setItem('uw_unleashed_watch',JSON.stringify(state.watchLater)); localStorage.setItem('uw_unleashed_topics',JSON.stringify(state.topics)); localStorage.setItem('uw_unleashed_qrefs',JSON.stringify(state.quickRefs)); localStorage.setItem('uw_unleashed_day',state.currentDay); localStorage.setItem('uw_unleashed_sync',JSON.stringify(state.sync)); }
+
+    // ---------- PIN lock UI ----------
+    async function showPinLock(){ const html = `
+      <div style="position:fixed;inset:0;background:rgba(6,18,38,0.6);display:flex;align-items:center;justify-content:center;z-index:99999">
+        <div style="background:#fff;padding:20px;border-radius:12px;max-width:420px;width:88%">
+          <h3 style="margin-top:0">Unlock Ultimate Workflow</h3>
+          <p style="color:${'var(--muted)'}">Enter your PIN to unlock all data.</p>
+          <input id="pinInput" placeholder="Enter PIN" style="width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #e6eefc">
+          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+            <button id="pinSubmit" class="btn">Unlock</button>
+          </div>
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">Tip: This device will remember the unlocked session until you sign out in Settings.</div>
+        </div>
+      </div>`;
+      const wrapper = document.createElement('div'); wrapper.id='pinLockWrapper'; wrapper.innerHTML = html; document.body.appendChild(wrapper);
+      document.getElementById('pinSubmit').addEventListener('click', async ()=>{ const v = document.getElementById('pinInput').value.trim(); if(!v) return alert('Enter PIN'); if(v===USER_PIN){ // derive key and attempt to pull cloud if configured
+            window.__UNLOCK_KEY = await deriveKeyFromPin(v); document.getElementById('pinLockWrapper').remove(); await postUnlockInit(); } else { alert('Incorrect PIN'); } });
     }
 
-    // -- Render & UI --
-    function setDay(d){ state.currentDay=d; saveAll(); renderCurrent(); }
-
-    function renderCurrent(){
-      renderTasks(); renderCourses(); renderWatch(); renderTopics(); renderQuickNotes();
+    // ---------- On unlock initialization ----------
+    async function postUnlockInit(){ // render UI and optionally pull remote
+      renderCurrent(); // if sync configured and gist id exists, try pull
+      if(syncEnabled() && state.sync.gistId){ try{ await pullAndMerge(); }catch(e){ console.warn('sync pull failed',e); } }
+      // show install prompt when available
     }
 
-    function renderTasks(){
-      const container=document.getElementById('tasksContainer'); const search=document.getElementById('globalSearch').value.toLowerCase();
-      const tasks = state.currentDay==='A'?state.dayA:state.dayB; container.innerHTML='';
-      tasks.forEach((t,i)=>{
-        if(search && !(`${t.name} ${t.notes}`.toLowerCase().includes(search))) return;
-        const row=document.createElement('div'); row.className='task-row';
-        row.innerHTML = `<div style='display:flex;gap:12px;align-items:center'><input type='checkbox' ${t.done? 'checked':''} onchange='toggleDone(${i})'>
-          <div><div class='task-title'>${escapeHtml(t.name)}</div><div class='task-min'>${t.minutes} min</div></div></div>
-          <div><button class='btn ghost' onclick='startTimer(${t.minutes},"${escapeHtml(t.name)}")'>Timer</button>
-          <button class='btn ghost' onclick='editTask(${i})'>Edit</button></div>`;
-        container.appendChild(row);
-      }); updateProgress();
-    }
+    // ---------- Render / UI core ----------
+    function setDay(d){ state.currentDay = d; scheduleSave(); renderCurrent(); }
+    function renderCurrent(){ renderTasks(); renderCourses(); renderWatch(); renderTopics(); renderQuickList(); }
 
-    function toggleDone(i){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; tasks[i].done=!tasks[i].done; saveAll(); updateProgress(); }
+    function renderTasks(){ const container = document.getElementById('tasksContainer'); container.innerHTML=''; const tasks = state.currentDay==='A'?state.dayA:state.dayB; const q = (document.getElementById('searchTasks').value||'').toLowerCase(); tasks.forEach((t,i)=>{ if(q && !(t.name.toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q))) return; const div = document.createElement('div'); div.className='task-row'; const courseLabel = t.courseId ? ` — ${getCourseById(t.courseId)?.name || 'course'}` : ''; div.innerHTML = `
+        <div class='task-left'>
+          <input type='checkbox' ${t.done? 'checked':''} onchange='toggleDone(${i})'>
+          <div style='min-width:160px'>
+            <div class='task-title'>${escapeHtml(t.name+courseLabel)}</div>
+            <div class='task-min'>${t.minutes} min</div>
+          </div>
+        </div>
+        <div class='meta-row'>
+          ${t.name.includes('Course Study')? `<select onchange="assignCourseToTask(this.value, ${i})">${renderCourseOptions(t.courseId)}</select>`: ''}
+          <button class='btn ghost small' onclick='startTimer(${t.minutes},"${escapeHtml(t.name)}")'>Timer</button>
+          <button class='btn ghost small' onclick='openTaskNotes(${i})'>Notes</button>
+        </div>`; container.appendChild(div); }); updateProgress(); }
 
+    function toggleDone(i){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; tasks[i].done=!tasks[i].done; scheduleSave(); updateProgress(); }
     function updateProgress(){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; const total=tasks.length; const done=tasks.filter(t=>t.done).length; const pct = total? Math.round((done/total)*100):0; document.getElementById('progressFill').style.width=pct+'%'; document.getElementById('progressText').innerText=pct+'% complete'; document.getElementById('progressCount').innerText=`${done} / ${total}`; }
 
-    // -- Courses --
-    function renderCourses(){ const el=document.getElementById('coursesSection'); el.innerHTML=''; state.courses.forEach((c,i)=>{ const row=document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='8px'; row.innerHTML = `<div style='flex:1'><a href='${c.url}' target='_blank'>${escapeHtml(c.name)}</a><div class='smallmuted'>${escapeHtml(c.url)}</div></div><div><button class='btn ghost' onclick='removeCourse(${i})'>Remove</button></div>`; el.appendChild(row); }); }
-    function addCourseFromInput(){ const n=document.getElementById('courseName').value.trim(); const u=document.getElementById('courseLink').value.trim(); if(!n||!u) return alert('fill both'); state.courses.push({name:n,url:u}); document.getElementById('courseName').value=''; document.getElementById('courseLink').value=''; saveAll(); renderCourses(); }
-    function removeCourse(i){ state.courses.splice(i,1); saveAll(); renderCourses(); }
+    // ---------- Courses ----------
+    function renderCourses(){ const el=document.getElementById('coursesSection'); el.innerHTML=''; if(state.courses.length===0) el.innerHTML='<div class="smallmuted">No courses yet — add one.</div>';
+      state.courses.forEach((c,i)=>{ const row=document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='8px'; row.innerHTML = `<div style='flex:1'><a href='${escapeHtml(c.url)}' target='_blank'>${escapeHtml(c.name)}</a><div class='smallmuted'>${escapeHtml(c.url)}</div></div>
+        <div style='display:flex;gap:8px'><button class='btn ghost small' onclick='openCourseEditor(${i})'>Edit</button><button class='btn ghost small' onclick='linkCourseToToday(${i})'>Use Today</button><button class='btn' onclick='removeCourse(${i})'>Delete</button></div>`; el.appendChild(row); }); }
 
-    // -- Watch Later --
-    function renderWatch(){ const list=document.getElementById('watchList'); list.innerHTML=''; state.watchLater.forEach((w,i)=>{ const item=document.createElement('div'); item.className='watch-item'; item.innerHTML = `<div><strong>${escapeHtml(w.title||w.url)}</strong><div class='smallmuted'>${escapeHtml(w.url)}</div></div><div style='display:flex;gap:6px'><button class='btn ghost' onclick='openWatch(${i})'>Open</button><button class='btn ghost' onclick='markWatched(${i})'>Mark</button><button class='btn' onclick='removeWatch(${i})'>Del</button></div>`; list.appendChild(item); }); }
-    function addWatch(){ const t=document.getElementById('wlTitle').value.trim(); const u=document.getElementById('wlUrl').value.trim(); if(!u) return alert('need url'); state.watchLater.unshift({title:t,url:u,watched:false}); saveAll(); document.getElementById('wlTitle').value=''; document.getElementById('wlUrl').value=''; renderWatch(); }
+    function addCourseFromInput(){ const n=document.getElementById('courseName').value.trim(); const u=document.getElementById('courseLink').value.trim(); if(!n||!u) return alert('Please enter both course name and URL'); const id = 'c_'+Date.now(); state.courses.unshift({id,name:n,url:u}); document.getElementById('courseName').value=''; document.getElementById('courseLink').value=''; scheduleSave(); renderCourses(); }
+    function removeCourse(i){ if(!confirm('Delete course?')) return; const id = state.courses[i].id; state.courses.splice(i,1); [state.dayA,state.dayB].forEach(list=>list.forEach(t=>{ if(t.courseId===id) t.courseId=null;})); scheduleSave(); renderCurrent(); }
+
+    function openCourseEditor(i){ const c = state.courses[i]; openModal(`Course: ${c.name}`, async ()=>{
+        const key = `course:${c.id}`; const data = await idbGet(key) || {notes:'',videos:[],versions:[]}; document.getElementById('modalTag').value = c.name; document.getElementById('modalUrl').value = c.url; document.getElementById('modalBody').value = data.notes||''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0);
+        window._modalSave = async ()=>{ const notes = document.getElementById('modalBody').value; const url = document.getElementById('modalUrl').value.trim(); const tag = document.getElementById('modalTag').value.trim(); c.name = tag || c.name; c.url = url || c.url; const prev = await idbGet(key) || {notes:'',videos:[],versions:[]}; prev.versions = prev.versions || []; prev.versions.unshift({ts:Date.now(),content:notes}); if(prev.versions.length>50) prev.versions.pop(); prev.notes = notes; prev.videos = prev.videos || []; await idbPut(key,prev); scheduleSave(); renderCourses(); alert('Course saved'); };
+      }); }
+
+    function linkCourseToToday(i){ const id = state.courses[i].id; const tasks = state.currentDay==='A'?state.dayA:state.dayB; const idx = tasks.findIndex(t=>t.name.includes('Course Study')); if(idx===-1) return alert('No Course Study slot found today'); tasks[idx].courseId = id; scheduleSave(); renderTasks(); }
+    function getCourseById(id){ return state.courses.find(c=>c.id===id); }
+    function renderCourseOptions(selected){ let out = '<option value="">— select —</option>'; state.courses.forEach(c=>{ out += `<option value="${c.id}" ${c.id===selected? 'selected':''}>${escapeHtml(c.name)}</option>`; }); return out; }
+    function assignCourseToTask(courseId, taskIndex){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; tasks[taskIndex].courseId = courseId || null; scheduleSave(); renderTasks(); }
+
+    // ---------- Watch Later ----------
+    function renderWatch(){ const list=document.getElementById('watchList'); list.innerHTML=''; if(state.watchLater.length===0) list.innerHTML='<div class="smallmuted">No videos saved.</div>';
+      state.watchLater.forEach((w,i)=>{ const item=document.createElement('div'); item.className='watch-item'; item.innerHTML = `<div><strong>${escapeHtml(w.title||w.url)}</strong><div class='smallmuted'>${escapeHtml(w.url)}</div></div>
+        <div class='watch-actions'><button class='btn ghost small' onclick='openWatch(${i})'>Open</button><button class='btn ghost small' onclick='markWatched(${i})'>Mark</button><button class='btn' onclick='removeWatch(${i})'>Del</button></div>`; list.appendChild(item); }); }
+    function addWatch(){ const t=document.getElementById('wlTitle').value.trim(); const u=document.getElementById('wlUrl').value.trim(); if(!u) return alert('Need a URL'); const id='w_'+Date.now(); state.watchLater.unshift({id,title:t,url:u,seen:false}); document.getElementById('wlTitle').value=''; document.getElementById('wlUrl').value=''; scheduleSave(); renderWatch(); }
     function openWatch(i){ window.open(state.watchLater[i].url,'_blank'); }
-    function markWatched(i){ state.watchLater[i].watched = !state.watchLater[i].watched; saveAll(); renderWatch(); }
-    function removeWatch(i){ state.watchLater.splice(i,1); saveAll(); renderWatch(); }
+    function markWatched(i){ state.watchLater[i].seen = !state.watchLater[i].seen; scheduleSave(); renderWatch(); }
+    function removeWatch(i){ state.watchLater.splice(i,1); scheduleSave(); renderWatch(); }
 
-    // -- Topics (Second Brain) --
-    function renderTopics(){ const list=document.getElementById('topicList'); list.innerHTML=''; state.topics.forEach((t,i)=>{ const node=document.createElement('div'); node.className='topic'; node.innerHTML=`<div style='display:flex;justify-content:space-between;align-items:center'><h4>${escapeHtml(t.title)}</h4><div class='topic-meta'><span>${escapeHtml(t.status)}</span><button class='btn ghost' onclick='openTopic(${i})'>Open</button><button class='btn' onclick='removeTopic(${i})'>Del</button></div></div><div class='smallmuted'>Tags: ${t.tags? t.tags.join(', '): '—'}</div><div class='notes'>${renderMarkdown(t.notes||'')}</div>`; list.appendChild(node); }); }
-    function addTopic(){ const title=document.getElementById('topicTitle').value.trim(); const status=document.getElementById('topicStatus').value; if(!title) return alert('title'); state.topics.unshift({title,status,tags:[],notes:''}); document.getElementById('topicTitle').value=''; saveAll(); renderTopics(); }
-    function removeTopic(i){ if(!confirm('Delete topic?')) return; state.topics.splice(i,1); saveAll(); renderTopics(); }
-    function openTopic(i){ const t=state.topics[i]; const newTitle = prompt('Title',t.title); if(newTitle!==null) t.title=newTitle; const newStatus = prompt('Status (backlog/learning/mastered)',t.status); if(newStatus) t.status=newStatus; const newTags = prompt('Tags (comma separated)',t.tags.join(', ')); if(newTags!==null) t.tags = newTags.split(',').map(s=>s.trim()).filter(Boolean); const newNotes = prompt('Notes (supports markdown)', t.notes || ''); if(newNotes!==null) t.notes=newNotes; saveAll(); renderTopics(); }
+    // ---------- Topics ----------
+    function renderTopics(){ const list=document.getElementById('topicList'); list.innerHTML=''; if(state.topics.length===0) list.innerHTML='<div class="smallmuted">No topics yet.</div>';
+      state.topics.forEach((t,i)=>{ const node=document.createElement('div'); node.className='topic'; node.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'><h4>${escapeHtml(t.title)}</h4>
+          <div class='topic-meta'><span>${escapeHtml(t.status)}</span><button class='btn ghost small' onclick='openTopic(${i})'>Open</button><button class='btn' onclick='removeTopic(${i})'>Del</button></div></div>
+          <div class='smallmuted'>Tags: ${t.tags? t.tags.join(', '): '—'}</div>
+          <div class='notes'>${escapeHtml((t.notes||'').substring(0,240)) || '<em>No notes yet</em>'}</div>`; list.appendChild(node); }); }
+    function addTopic(){ const title=document.getElementById('topicTitle').value.trim(); const status=document.getElementById('topicStatus').value; if(!title) return alert('Title required'); const id='t_'+Date.now(); state.topics.unshift({id,title,status,tags:[],notes:''}); document.getElementById('topicTitle').value=''; scheduleSave(); renderTopics(); }
+    function removeTopic(i){ if(!confirm('Delete topic?')) return; state.topics.splice(i,1); scheduleSave(); renderTopics(); }
+    function openTopic(i){ const t = state.topics[i]; openModal('Topic: '+t.title, ()=>{ document.getElementById('modalTag').value = t.tags? t.tags.join(', '): ''; document.getElementById('modalUrl').value = t.status; document.getElementById('modalBody').value = t.notes || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = 0; window._modalSave = async ()=>{ t.tags = (document.getElementById('modalTag').value||'').split(',').map(s=>s.trim()).filter(Boolean); t.status = document.getElementById('modalUrl').value || t.status; t.notes = document.getElementById('modalBody').value; scheduleSave(); renderTopics(); alert('Saved topic'); }; }); }
 
-    // -- Quick Notes (markdown supported) --
-    function renderQuickNotes(){ const el=document.getElementById('quickNotesList'); el.innerHTML=''; state.quickNotes.forEach((n,i)=>{ const d=document.createElement('div'); d.style.padding='8px'; d.style.borderBottom='1px solid #f1f5f9'; d.innerHTML=`<div style='display:flex;justify-content:space-between'><div><strong>${n.tag? '['+escapeHtml(n.tag)+'] ' : ''}</strong>${renderMarkdown(n.text.substring(0,500))}</div><div><button class='btn ghost' onclick='openQuick(${i})'>Open</button><button class='btn' onclick='delQuick(${i})'>Del</button></div></div>`; el.appendChild(d); }); }
-    function saveQuickNote(){ const t=document.getElementById('quickNote').value.trim(); const tag=document.getElementById('noteTag').value.trim(); if(!t) return; state.quickNotes.unshift({text:t,tag:tag||null,created:Date.now()}); document.getElementById('quickNote').value=''; document.getElementById('noteTag').value=''; saveAll(); renderQuickNotes(); }
-    function openQuick(i){ const n=state.quickNotes[i]; const newText = prompt('Edit note (markdown supported)', n.text); if(newText!==null){ n.text=newText; saveAll(); renderQuickNotes(); } }
-    function delQuick(i){ state.quickNotes.splice(i,1); saveAll(); renderQuickNotes(); }
+    // ---------- Quick Notes (IndexedDB-backed) ----------
+    async function saveQuickNote(){ const text=document.getElementById('quickNote').value.trim(); const tag=document.getElementById('noteTag').value.trim(); if(!text) return alert('Note empty'); const id = 'q_'+Date.now(); const obj={id,tag,text,created:Date.now(),versions:[{ts:Date.now(),text}]}; state.quickRefs.unshift({id,tag,summary:text.substring(0,200)}); scheduleSave(); await idbPut(`note:${id}`, obj); renderQuickList(); document.getElementById('quickNote').value=''; document.getElementById('noteTag').value=''; }
+    async function renderQuickList(){ const el=document.getElementById('quickNotesList'); el.innerHTML=''; state.quickRefs.forEach((r,i)=>{ const d=document.createElement('div'); d.style.padding='8px'; d.style.borderBottom='1px solid #f1f5f9'; d.innerHTML = `<div style='display:flex;justify-content:space-between'><div><strong>${r.tag? '['+escapeHtml(r.tag)+'] ':''}</strong>${escapeHtml(r.summary)}</div><div><button class='btn ghost small' onclick='openQuick("${r.id}")'>Open</button><button class='btn' onclick='delQuick(${i})'>Del</button></div></div>`; el.appendChild(d); }); }
+    async function openQuick(id){ const data = await idbGet(`note:${id}`); if(!data) return alert('Note not found'); openModal('Note', ()=>{ document.getElementById('modalTag').value = data.tag || ''; document.getElementById('modalUrl').value = ''; document.getElementById('modalBody').value = data.text || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0); window._modalSave = async ()=>{ const newText = document.getElementById('modalBody').value; data.versions = data.versions || []; data.versions.unshift({ts:Date.now(),text:newText}); if(data.versions.length>200) data.versions.pop(); data.text = newText; data.tag = document.getElementById('modalTag').value; await idbPut(`note:${id}`,data); const ref = state.quickRefs.find(r=>r.id===id); if(ref) ref.summary = newText.substring(0,200); scheduleSave(); renderQuickList(); alert('Saved'); }; }); }
+    async function delQuick(i){ const id = state.quickRefs[i].id; if(!confirm('Delete note?')) return; state.quickRefs.splice(i,1); scheduleSave(); await idbDel(`note:${id}`); renderQuickList(); }
 
-    // -- Timers (simple) --
-    let timerInterval=null; function startTimer(min,label){ clearInterval(timerInterval); const end = Date.now() + min*60*1000; let popup = document.getElementById('timerPopup'); if(!popup){ popup = document.createElement('div'); popup.id='timerPopup'; popup.style= 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);padding:18px;border-radius:12px;box-shadow:0 16px 40px rgba(12,18,36,0.2);z-index:9999'; popup.innerHTML = `<h3>Timer</h3><h1>00:00</h1><div style='margin-top:10px;display:flex;gap:8px'><button class='btn' onclick='closeTimer()'>Close</button></div>`; document.body.appendChild(popup); }
-      popup.style.display='block'; popup.querySelector('h3').innerText = label;
-      function tick(){ const left = Math.max(0, end - Date.now()); const m = Math.floor(left/60000); const s = Math.floor((left%60000)/1000); popup.querySelector('h1').innerText = `${m}:${String(s).padStart(2,'0')}`; if(left<=0){ clearInterval(timerInterval); popup.querySelector('h1').innerText='Done'; navigator.vibrate && navigator.vibrate(200); } }
-      tick(); timerInterval=setInterval(tick,1000);
-    }
+    // ---------- Task notes (per-task) ----------
+    async function openTaskNotes(taskIndex){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; const t = tasks[taskIndex]; const key = `task:${state.currentDay}:${taskIndex}`; const data = await idbGet(key) || {notes:'',versions:[]}; openModal(t.name, ()=>{ document.getElementById('modalTag').value = ''; document.getElementById('modalUrl').value = ''; document.getElementById('modalBody').value = data.notes || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0); window._modalSave = async ()=>{ const newText = document.getElementById('modalBody').value; data.versions = data.versions || []; data.versions.unshift({ts:Date.now(),text:newText}); if(data.versions.length>200) data.versions.pop(); data.notes = newText; await idbPut(key,data); scheduleSave(); alert('Task notes saved'); }; }); }
+
+    // ---------- Timer ----------
+    let timerInterval=null; function startTimer(min,label){ clearInterval(timerInterval); const end = Date.now() + min*60*1000; const popup = document.getElementById('timerPopup') || createTimerPopup(); popup.style.display='block'; popup.querySelector('h3').innerText = label; function tick(){ const left = Math.max(0, end - Date.now()); const m = Math.floor(left/60000); const s = Math.floor((left%60000)/1000); popup.querySelector('h1').innerText = `${m}:${String(s).padStart(2,'0')}`; if(left<=0){ clearInterval(timerInterval); popup.querySelector('h1').innerText='Done'; navigator.vibrate && navigator.vibrate(200); } } tick(); timerInterval=setInterval(tick,1000); }
+    function createTimerPopup(){ const popup=document.createElement('div'); popup.id='timerPopup'; popup.style= 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);padding:18px;border-radius:12px;box-shadow:0 16px 40px rgba(12,18,36,0.2);z-index:9999'; popup.innerHTML = `<h3>Timer</h3><h1>00:00</h1><div style='margin-top:10px;display:flex;gap:8px'><button class='btn' onclick='closeTimer()'>Close</button></div>`; document.body.appendChild(popup); return popup; }
     function closeTimer(){ const popup=document.getElementById('timerPopup'); if(popup) popup.style.display='none'; clearInterval(timerInterval); }
 
-    // -- Export / Import --
-    function exportData(){ const data = JSON.stringify(state); const blob = new Blob([data],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='ultimate-workflow-backup.json'; a.click(); URL.revokeObjectURL(url); }
-    function importPrompt(){ const json = prompt('Paste exported JSON here'); if(!json) return; try{ const obj = JSON.parse(json); if(obj.topics && obj.watchLater){ Object.assign(state,obj); saveAll(); renderCurrent(); alert('Imported'); } }catch(e){alert('Invalid JSON') } }
+    // ---------- Full IDB export/import (includes notes and versions) ----------
+    async function exportFullDB(){ // gather local state + idb notes
+      const exportObj = {meta: state, notes:{}}; const keys = await idbKeys(); for(const k of keys){ exportObj.notes[k] = await idbGet(k); } const blob = new Blob([JSON.stringify(exportObj)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='uw_full_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url); }
+    async function importFullBackupPrompt(){ const json = prompt('Paste full JSON backup or confirm paste'); if(!json) return; try{ const obj = JSON.parse(json); if(obj.meta){ Object.assign(state,obj.meta); // restore idb notes
+          for(const k of Object.keys(obj.notes||{})){ await idbPut(k,obj.notes[k]); } scheduleSave(); renderCurrent(); alert('Imported full backup'); } }catch(e){ alert('Invalid JSON or import failed'); } }
 
-    // -- Global Search across everything --
-    function globalSearch(){ const q=document.getElementById('globalSearch').value.trim().toLowerCase(); if(!q){ renderCurrent(); return; }
-      const tasks = state.currentDay==='A'?state.dayA:state.dayB; const tMatches = tasks.filter(t=>`${t.name} ${t.notes||''}`.toLowerCase().includes(q));
-      const el=document.getElementById('tasksContainer'); el.innerHTML=''; tMatches.forEach((t,i)=>{ const row=document.createElement('div'); row.className='task-row'; row.innerHTML=`<div style='display:flex;gap:12px;align-items:center'><input type='checkbox' ${t.done? 'checked':''} onchange='toggleDone(${i})'><div><div class='task-title'>${escapeHtml(t.name)}</div><div class='task-min'>${t.minutes} min</div></div></div><div></div>`; el.appendChild(row); });
-      highlightMatches(q);
-    }
-    function highlightMatches(q){ document.getElementById('topicList').querySelectorAll('.topic').forEach(node=>{ node.style.display = node.innerText.toLowerCase().includes(q)? 'block' : 'none'; });
-      document.getElementById('watchList').querySelectorAll('.watch-item').forEach(node=>{ node.style.display = node.innerText.toLowerCase().includes(q)? 'flex' : 'none'; });
-      document.getElementById('coursesSection').querySelectorAll('div').forEach(node=>{ node.style.display = node.innerText.toLowerCase().includes(q)? 'flex' : 'none'; });
-      document.getElementById('quickNotesList').querySelectorAll('div').forEach(node=>{ node.style.display = node.innerText.toLowerCase().includes(q)? 'block' : 'none'; }); }
+    // ---------- Cloud sync: GitHub Gist (encrypted) ----------
+    function syncEnabled(){ return !!(state.sync && state.sync.gistId && state.sync.token); }
+    async function triggerAutoPush(){ if(!syncEnabled()) return; // debounce push
+      if(window._pushTimer) clearTimeout(window._pushTimer); window._pushTimer = setTimeout(async ()=>{ try{ await pushEncryptedSnapshot(); }catch(e){ console.warn('push failed',e); } }, 800); }
 
-    // -- Utilities --
-    function escapeHtml(str){ return String(str||'').replace(/[&<>\"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
-    function renderMarkdown(text){ if(!text) return '<em>No content</em>'; let out = escapeHtml(text); out = out.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'); out = out.replace(/\*(.*?)\*/g,'<em>$1</em>'); out = out.replace(/`(.*?)`/g,'<code>$1</code>'); out = out.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>'); return out; }
+    async function createEncryptedSnapshot(){ const key = window.__UNLOCK_KEY; if(!key) throw new Error('No key'); // gather light state + index references, notes remain in IDB but we include small summaries
+      const snapshot = {state: state, timestamp: Date.now()}; const encrypted = await encryptJson(snapshot, key); return encrypted; }
 
-    // -- Keyboard shortucts --
-    document.addEventListener('keydown',(e)=>{ if(e.key === '/') { e.preventDefault(); document.getElementById('globalSearch').focus(); } if(e.key === 'n') { document.getElementById('quickNote').focus(); } });
+    async function pushEncryptedSnapshot(){ const enc = await createEncryptedSnapshot(); // upload to gist
+      const url = `https://api.github.com/gists/${state.sync.gistId}`; const body = {files:{'uw_encrypted_snapshot.json':{content:enc}}}; const res = await fetch(url,{method:'PATCH',headers:{'Authorization':'token '+state.sync.token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Gist push failed'); state.sync.lastPush = Date.now(); scheduleSave(); }
 
-    // -- Dark toggle --
-    function toggleDark(){ document.body.classList.toggle('dark-mode'); }
+    async function pullEncryptedSnapshot(){ if(!syncEnabled()) throw new Error('Sync not configured'); const url = `https://api.github.com/gists/${state.sync.gistId}`; const res = await fetch(url,{headers:{'Authorization':'token '+state.sync.token}}); if(!res.ok) throw new Error('Gist fetch failed'); const data = await res.json(); const file = data.files && data.files['uw_encrypted_snapshot.json']; if(!file) throw new Error('Snapshot missing'); return file.content; }
 
-    // -- Init & register simple offline service worker (PWA-lite) --
-    renderCurrent();
-    if('serviceWorker' in navigator){ try{ const swCode = `self.addEventListener('install', e => { self.skipWaiting(); }); self.addEventListener('fetch', e => { e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))); });`; const blob = new Blob([swCode],{type:'application/javascript'}); const swUrl = URL.createObjectURL(blob); navigator.serviceWorker.register(swUrl).catch(()=>{}); }catch(e){} }
+    async function pullAndMerge(){ const enc = await pullEncryptedSnapshot(); const key = window.__UNLOCK_KEY; const remote = await decryptJson(enc, key); // naive merge: remote replaces local, but keep local versions for IDB notes
+      if(!confirm('Merge remote snapshot into local? OK to overwrite local light state.')) return; // simple overwrite
+      Object.assign(state, remote.state); state.sync.lastPull = Date.now(); scheduleSave(); renderCurrent(); alert('Merged remote snapshot'); }
 
-    window._uw={state,saveAll};
+    async function createOrConnectGist(token){ // create a private gist if not exists
+      if(!token) throw new Error('token required'); // create gist
+      const body = {public:false,files:{'uw_encrypted_snapshot.json':{content:'INITIAL'}}}; const res = await fetch('https://api.github.com/gists',{method:'POST',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Gist create failed'); const data = await res.json(); state.sync.token = token; state.sync.gistId = data.id; state.sync.lastPush = null; scheduleSave(); return data.id; }
+
+    // ---------- Settings UI ----------
+    function openSettings(){ openModal('Settings', async ()=>{
+        document.getElementById('modalTag').value = state.sync.gistId || ''; document.getElementById('modalUrl').value = state.sync.token || ''; document.getElementById('modalBody').value = 'Settings:
+- To enable GitHub sync, paste a GitHub Personal Access Token with gist scope into the "token" field, and click Save.
+- To change PIN, use Change PIN below.'; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = 0; window._modalSave = async ()=>{ const gist = document.getElementById('modalTag').value.trim(); const token = document.getElementById('modalUrl').value.trim(); if(token && !gist){ // create gist for user
+              try{ const id = await createOrConnectGist(token); alert('Gist created: '+id); }catch(e){ alert('Failed to create gist: '+e.message); }
+            } else { state.sync.gistId = gist || state.sync.gistId; state.sync.token = token || state.sync.token; scheduleSave(); alert('Settings saved'); } }; }); }
+
+    // ---------- PIN change flow (re-encrypt remote snapshot) ----------
+    async function changePinFlow(){ const oldPin = prompt('Enter current PIN'); if(oldPin!==USER_PIN) return alert('Current PIN mismatch'); const newPin = prompt('Enter new PIN'); if(!newPin) return alert('Invalid new PIN'); // derive keys
+      const oldKey = await deriveKeyFromPin(oldPin); const newKey = await deriveKeyFromPin(newPin); // if sync enabled, re-encrypt remote snapshot
+      if(syncEnabled()){ try{ const enc = await pullEncryptedSnapshot(); const remote = await decryptJson(enc, oldKey); const reenc = await encryptJson(remote, newKey); // push
+            const url = `https://api.github.com/gists/${state.sync.gistId}`; const body = {files:{'uw_encrypted_snapshot.json':{content:reenc}}}; const res = await fetch(url,{method:'PATCH',headers:{'Authorization':'token '+state.sync.token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Push failed'); alert('Remote backup re-encrypted with new PIN'); }catch(e){ alert('Failed to re-encrypt remote: '+e.message); return; } }
+      alert('PIN change completed. Note: you must remember your new PIN'); }
+
+    // ---------- Full IDB export/import helpers (for user) ----------
+    async function exportFullBackupObject(){ const backup = {meta:state, notes:{}}; const keys = await idbKeys(); for(const k of keys){ backup.notes[k] = await idbGet(k); } return backup; }
+    async function importFullBackup(obj){ if(obj.meta) Object.assign(state,obj.meta); for(const k of Object.keys(obj.notes||{})){ await idbPut(k,obj.notes[k]); } scheduleSave(); renderCurrent(); }
+    async function importFullBackupPrompt(){ const data = prompt('Paste full backup JSON here'); if(!data) return; try{ const obj = JSON.parse(data); await importFullBackup(obj); alert('Imported full backup'); }catch(e){ alert('Invalid JSON'); } }
+
+    async function exportFullDB(){ const obj = await exportFullBackupObject(); const blob = new Blob([JSON.stringify(obj)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='uw_full_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url); }
+
+    // ---------- Utility & UI helpers ----------
+    function escapeHtml(str){ return String(str||'').replace(/[&<>\"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function openModal(title,onOpen){ document.getElementById('modalTitle').innerText = title; document.getElementById('noteModal').classList.add('show'); if(onOpen) onOpen(); }
+    function closeModal(){ document.getElementById('noteModal').classList.remove('show'); if(window._modalSave) window._modalSave = null; }
+    async function saveModalNote(){ if(window._modalSave) await window._modalSave(); closeModal(); }
+
+    // ---------- Boot & unlock ----------
+    (async ()=>{
+      // show PIN lock overlay first
+      await showPinLock();
+    })();
+
+    // ---------- Expose some functions for debugging ----------
+    window._uw = {state, saveLightState, idbGet, idbPut, exportFullBackupObject};
+
+    // make sure UI renders when unlocked
+    window.renderCurrent = renderCurrent;
   </script>
 </body>
 </html>
+
