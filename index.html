@@ -1,391 +1,784 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ultimate Workflow — Second Brain (Unleashed)</title>
-  <meta name="theme-color" content="#2746f0"/>
-  <style>
-    :root{--bg:#f7f9fc;--card:#ffffff;--muted:#6b7280;--text:#061226;--accent:#2746f0;--accent-2:#6a8bff;--success:#00b37e;--danger:#e24b4b}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
-    .app{max-width:1200px;margin:24px auto;padding:18px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-    h1{margin:0;font-size:20px}
-
-    .layout{display:grid;grid-template-columns:1fr 420px;gap:16px}
-    .panel{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(6,18,38,0.06);transition:box-shadow .18s ease}
-    .panel:hover{box-shadow:0 14px 46px rgba(6,18,38,0.08)}
-
-    .workflow-header{display:flex;gap:12px;align-items:center}
-    .day-toggle{display:flex;gap:8px}
-    .btn{border:0;padding:10px 14px;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
-    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(39,70,240,0.12)}
-    .btn.small{padding:8px 10px;font-size:13px}
-
-    .tasks{margin-top:12px}
-    .task-row{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid #eef2ff;margin-bottom:10px;transition:transform .12s ease}
-    .task-row:hover{transform:translateY(-3px)}
-    .task-left{display:flex;align-items:center;gap:12px}
-    .task-title{font-weight:600}
-    .task-min{color:var(--muted);font-size:13px}
-
-    .progress-wrap{margin-top:12px}
-    .progress-bar{height:12px;background:#e6ecff;border-radius:8px;overflow:hidden}
-    .progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .35s ease}
-    .progress-meta{display:flex;justify-content:space-between;margin-top:6px;color:var(--muted);font-size:13px}
-
-    .secondbrain{display:flex;flex-direction:column;gap:12px}
-    .sb-section{padding:12px;border-radius:10px;border:1px solid #eef2ff}
-    .sb-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .small{font-size:13px;color:var(--muted)}
-
-    .watch-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;padding-right:6px}
-    .watch-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:#fbfbff}
-    .watch-item a{color:var(--accent);text-decoration:none}
-
-    .topic-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow:auto}
-    .topic{border-radius:10px;padding:10px;background:#fff;border:1px solid #f1f5f9}
-    .topic h4{margin:0 0 6px 0}
-    .topic-meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
-    .notes{margin-top:8px;background:#fbfdff;padding:8px;border-radius:8px;border:1px dashed #eef1ff}
-
-    textarea, input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eefc}
-
-    .row{display:flex;gap:8px}
-    .input{padding:10px;border-radius:8px;border:1px solid #e6eefc;flex:1}
-    .smallmuted{color:var(--muted);font-size:13px}
-
-    .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);padding:16px;border-radius:12px;box-shadow:0 30px 60px rgba(6,18,38,0.28);z-index:9999;max-width:980px;width:94%;display:none}
-    .modal.show{display:block}
-    .modal .row{margin-top:8px}
-
-    .meta-row{display:flex;gap:10px;align-items:center}
-
-    .install-btn{position:fixed;left:20px;bottom:20px;background:var(--accent);color:#fff;padding:12px 16px;border-radius:12px;box-shadow:0 8px 20px rgba(39,70,240,0.18);z-index:1000;border:none}
-
-    @media (max-width:980px){.layout{grid-template-columns:1fr;}.secondbrain{order:2}}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ultimate Flow — Changeable Themes (Single-file)</title>
+<meta name="theme-color" content="#2746f0" />
+<style>
+  /* Root CSS variables (will be overridden by selected theme) */
+  :root{
+    --bg: linear-gradient(180deg,#07102a 0%, #07172e 100%);
+    --panel-bg: rgba(255,255,255,0.02);
+    --card-bg: rgba(255,255,255,0.03);
+    --muted: #99a3b5;
+    --text: #e6eef8;
+    --accent: #4f46e5;
+    --accent-2: #7c3aed;
+    --glass-border: rgba(255,255,255,0.04);
+    --success: #10b981;
+    --danger: #ef4444;
+    --radius: 12px;
+    --shadow: 0 18px 44px rgba(2,6,23,0.6);
+    --glass-blur: 8px;
+    --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  /* Reset & base */
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:var(--font-sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  /* Layout */
+  .app{max-width:1200px;margin:26px auto;padding:18px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;box-shadow:0 12px 40px rgba(0,0,0,0.45)}
+  .logo svg{opacity:0.95}
+  h1{margin:0;font-size:18px;font-weight:700}
+  .subtitle{font-size:13px;color:var(--muted)}
+  .controls{display:flex;gap:8px;align-items:center}
+  .btn{border:0;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;cursor:pointer;font-weight:600;box-shadow:var(--shadow)}
+  .btn.ghost{background:transparent;border:1px solid var(--glass-border);color:var(--muted);box-shadow:none;padding:8px 12px}
+  .btn.small{padding:8px 10px;font-size:13px}
+  .layout{display:grid;grid-template-columns:1fr 380px;gap:18px}
+  .panel{background:var(--panel-bg);border-radius:var(--radius);padding:14px;border:1px solid var(--glass-border);box-shadow:var(--shadow);backdrop-filter: blur(var(--glass-blur))}
+  .row{display:flex;gap:8px;align-items:center}
+  input[type=text], input[type=url], textarea, select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);outline:none}
+  textarea{min-height:140px;resize:vertical}
+  .small{font-size:13px;color:var(--muted)}
+  /* Tasks */
+  .tasks{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .task{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:var(--card-bg);border:1px solid rgba(255,255,255,0.02);transition:transform .12s, box-shadow .12s}
+  .task:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(0,0,0,0.6)}
+  .task-left{display:flex;gap:12px;align-items:center}
+  .checkbox{width:18px;height:18px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .task-title{font-weight:700}
+  .task-meta{font-size:13px;color:var(--muted)}
+  .task-actions{display:flex;gap:8px;align-items:center}
+  select.course-select{padding:8px;border-radius:8px;background:transparent;color:var(--text);border:1px solid rgba(255,255,255,0.03)}
+  /* right column */
+  .secondbrain{display:flex;flex-direction:column;gap:12px}
+  .card{padding:10px;border-radius:10px;background:var(--card-bg);border:1px solid rgba(255,255,255,0.02)}
+  .watch-list,.topic-list,.notes-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto;padding-right:6px}
+  .watch-item,.topic-item,.note-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02)}
+  /* progress */
+  .progress{display:flex;align-items:center;gap:12px}
+  .ring{width:72px;height:72px;position:relative}
+  .ring svg{filter:drop-shadow(0 8px 22px rgba(0,0,0,0.6))}
+  .ring .label{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700}
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.55);display:none;align-items:center;justify-content:center;z-index:9999}
+  .overlay.show{display:flex}
+  .modal{width:880px;max-width:94%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03)}
+  .modal h3{margin:0 0 8px 0}
+  .muted{color:var(--muted)}
+  /* theme editor */
+  .theme-palette{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .theme-chip{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+  .color-input{width:42px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);padding:0}
+  /* responsive */
+  @media (max-width:1000px){ .layout{grid-template-columns:1fr} .controls input[type=text]{min-width:120px} }
+</style>
 </head>
 <body>
-  <div class="app" id="appRoot">
-    <div class="topbar">
-      <h1>Ultimate Workflow — Second Brain (Unleashed)</h1>
-      <div class="controls">
-        <button class="btn ghost" onclick="exportFullDB()">Export Full Backup</button>
-        <button class="btn ghost" onclick="importFullBackupPrompt()">Import Full Backup</button>
-        <button class="btn" onclick="openSettings()">Settings</button>
+
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="4" fill="white" opacity="0.06"/><path d="M7 12h10M7 8h10M7 16h6" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>Ultimate Flow — Second Brain</h1>
+        <div class="subtitle">Daily planner • Courses • Notes • Watch Later — themeable</div>
       </div>
     </div>
 
-    <div class="layout">
-      <div>
-        <div class="panel">
-          <div class="workflow-header">
-            <div>
-              <div class="day-toggle">
-                <button class="btn" onclick="setDay('A')">Day A</button>
-                <button class="btn ghost" onclick="setDay('B')">Day B</button>
-              </div>
-              <div class="smallmuted" style="margin-top:8px">Complete tasks, pick a course for Course Study, take notes and add video takeaways</div>
+    <div class="controls">
+      <input id="globalSearch" type="text" placeholder="Search (/) — tasks, notes, courses" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)">
+      <button class="btn ghost" id="themeBtn">Theme</button>
+      <button class="btn" id="settingsBtn">Settings</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section>
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="btn" id="dayA">Day A</button>
+              <button class="btn ghost" id="dayB">Day B</button>
             </div>
-            <div class="controls">
-              <input id="searchTasks" class="input" placeholder="Search tasks, topics, courses..." oninput="renderCurrent()">
-            </div>
+            <div class="small" style="margin-top:8px">Day cycles — complete tasks, assign courses, open notes</div>
           </div>
-
-          <div class="tasks" id="tasksContainer"></div>
-
-          <div class="progress-wrap">
-            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="progress-meta"><span id="progressText">0% complete</span><span id="progressCount">0 / 0</span></div>
+          <div class="progress">
+            <div class="ring">
+              <svg viewBox="0 0 100 100">
+                <defs><linearGradient id="g"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--accent-2)"/></linearGradient></defs>
+                <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.06)" stroke-width="8" fill="none"></circle>
+                <circle id="ringFill" cx="50" cy="50" r="40" stroke="url(#g)" stroke-width="8" stroke-linecap="round" fill="none" stroke-dasharray="251.2" stroke-dashoffset="251.2" transform="rotate(-90 50 50)"></circle>
+              </svg>
+              <div class="label" style="position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;justify-content:center;font-weight:700" id="ringLabel">0%</div>
+            </div>
+            <div style="text-align:left">
+              <div class="small">Today</div>
+              <div style="font-weight:700" id="progMeta">0 / 0</div>
+            </div>
           </div>
         </div>
 
-        <div class="panel" style="margin-top:12px">
-          <h3 style="margin-top:0">Courses — add links, notes, and videos</h3>
-          <div id="coursesSection"></div>
-          <div style="margin-top:10px" class="row">
-            <input id="courseName" class="input" placeholder="Course title">
-            <input id="courseLink" class="input" placeholder="URL (course page or platform)">
-            <button class="btn" onclick="addCourseFromInput()">Add Course</button>
-          </div>
-        </div>
+        <div class="tasks" id="tasksContainer"></div>
       </div>
 
-      <aside class="secondbrain">
-
-        <div class="panel sb-section">
-          <div class="sb-header"><strong>Watch Later — YouTube</strong><span class="small">save short links for takeaways</span></div>
-          <div class="row" style="margin-bottom:8px">
-            <input id="wlTitle" class="input" placeholder="Short title (eg: JS closure)">
-            <input id="wlUrl" class="input" placeholder="YouTube URL">
-            <button class="btn" onclick="addWatch()">Save</button>
+      <div class="panel" style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h3 style="margin:0">Courses</h3>
+            <div class="small">Add your courses and attach notes / videos</div>
           </div>
-          <div class="watch-list" id="watchList"></div>
+          <div class="small muted">Click 'Use' to assign to Course Study</div>
         </div>
+        <div id="coursesList" style="margin-top:12px"></div>
 
-        <div class="panel sb-section">
-          <div class="sb-header"><strong>Learning Hub</strong><span class="small">topics you are learning / want to learn</span></div>
-
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <input id="topicTitle" class="input" placeholder="Topic name (eg: Neural Nets)">
-            <select id="topicStatus" class="input" style="max-width:160px">
-              <option value="backlog">Backlog</option>
-              <option value="learning">Learning</option>
-              <option value="mastered">Mastered</option>
-            </select>
-            <button class="btn" onclick="addTopic()">Add Topic</button>
-          </div>
-
-          <div class="topic-list" id="topicList"></div>
-
-          <div style="margin-top:10px" class="smallmuted">Tip: Use topics as folders — each topic saves notes, links, progress, and tags.</div>
+        <div class="row" style="margin-top:12px">
+          <input id="courseName" type="text" placeholder="Course title (eg: JS Mastery)" />
+          <input id="courseUrl" type="url" placeholder="Course URL" />
+          <button class="btn" id="addCourse">Add</button>
         </div>
+      </div>
+    </section>
 
-        <div class="panel sb-section">
-          <div class="sb-header"><strong>Quick Notes</strong><span class="small">fast capture — autosave & versioned</span></div>
-          <textarea id="quickNote" placeholder="Capture an idea, paste a link, or jot a reminder"></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input id="noteTag" class="input" placeholder="tag (eg: idea, research)">
-            <button class="btn" onclick="saveQuickNote()">Save Note</button>
-          </div>
-          <div id="quickNotesList" style="margin-top:10px;max-height:160px;overflow:auto"></div>
+    <aside class="secondbrain">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><h3 style="margin:0">Watch Later</h3><div class="small">Save YouTube links & quick takeaways</div></div>
+          <div class="small muted">Queue</div>
         </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input id="wlTitle" type="text" placeholder="Title (optional)" />
+          <input id="wlUrl" type="url" placeholder="YouTube URL" />
+        </div>
+        <div style="margin-top:8px"><button class="btn" id="addWatch">Save</button></div>
+        <div class="watch-list" id="watchList" style="margin-top:12px"></div>
+      </div>
 
-      </aside>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><h3 style="margin:0">Learning Hub</h3><div class="small">Topics you're learning</div></div>
+          <div class="small muted">Progress</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input id="topicName" type="text" placeholder="Topic name" />
+          <select id="topicStatus"><option value="backlog">Backlog</option><option value="learning">Learning</option><option value="mastered">Mastered</option></select>
+          <button class="btn" id="addTopic">Add</button>
+        </div>
+        <div class="topic-list" id="topicList" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div><h3 style="margin:0">Quick Notes</h3><div class="small">Autosave + versioning</div></div><div class="small muted">Local only</div></div>
+        <textarea id="quickNote" placeholder="Jot something..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px"><input id="quickTag" placeholder="tag" /><button class="btn" id="saveQuick">Save</button></div>
+        <div class="notes-list" id="notesList" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card" style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><h3 style="margin:0">Theme</h3><div class="small">Pick a theme or customize</div></div>
+          <div class="small muted">Saved to local</div>
+        </div>
+        <div style="margin-top:10px" class="theme-palette" id="themePalette"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+          <label class="small muted">Accent</label>
+          <input type="color" id="accentPicker" class="color-input" title="Accent color">
+          <label class="small muted">Accent 2</label>
+          <input type="color" id="accent2Picker" class="color-input" title="Accent 2">
+          <label class="small muted">BG</label>
+          <input type="color" id="bgPicker" class="color-input" title="Background start color">
+          <button class="btn small" id="saveTheme">Save</button>
+        </div>
+        <div style="margin-top:10px" class="small muted">Tip: pick a theme then tweak the accent colors.</div>
+      </div>
+    </aside>
+  </main>
+
+  <footer style="margin-top:18px;text-align:center;font-size:13px;color:var(--muted)">Ultimate Flow — private • autosave • PWA-ready</footer>
+</div>
+
+<!-- Modal overlay -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true" id="modal">
+    <h3 id="modalTitle">Edit</h3>
+    <div style="display:flex;gap:8px"><input id="modalTitleInput" placeholder="title / tag" /><input id="modalUrlInput" placeholder="related URL (optional)" /></div>
+    <div style="margin-top:8px"><textarea id="modalBody"></textarea></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+      <div class="small muted" id="modalMeta">Autosave idle</div>
+      <div style="display:flex;gap:8px"><button class="btn ghost" id="modalClose">Close</button><button class="btn" id="modalSave">Save</button></div>
     </div>
   </div>
+</div>
 
-  <button id="installBtn" class="install-btn" style="display:none">Install App</button>
+<script>
+/* -------------------------------------------
+   Vanilla JS app: themeable + autosave + notes
+   - Lightweight IndexedDB for note bodies
+   - localStorage for metadata (lists)
+   - Theme system with presets + color pickers
+   ------------------------------------------- */
 
-  <!-- Modals -->
-  <div class="modal" id="noteModal">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3 id="modalTitle">Edit</h3>
-      <div>
-        <button class="btn small" onclick="saveModalNote()">Save</button>
-        <button class="btn ghost small" onclick="closeModal()">Close</button>
-      </div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <input id="modalTag" class="input" placeholder="tag / title">
-      <input id="modalUrl" class="input" placeholder="related link (optional)">
-    </div>
-    <div style="margin-top:10px">
-      <textarea id="modalBody" style="min-height:240px"></textarea>
-    </div>
-    <div style="margin-top:8px;color:var(--muted);font-size:13px">Autosave: <span id="autosaveStatus">idle</span> — Versions: <span id="versionCount">0</span></div>
-  </div>
+/* ---------- Helpers ---------- */
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+const ls = (k, v) => v === undefined ? JSON.parse(localStorage.getItem(k) || 'null') : localStorage.setItem(k, JSON.stringify(v));
+const escapeHtml = s => String(s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-  <script>
-    /******************************************************************
-     * Ultimate Workflow — Unleashed
-     * - Full autosave (localStorage + IndexedDB)
-     * - PIN lock on load (user provided PIN hardcoded as requested)
-     * - Encrypted cloud sync to GitHub Gist (optional)
-     * - Full IDB export/import
-     * - Course editor with notes + videos, per-task notes
-     * - Versioning and conflict tools
-     * - Polished UI + smooth behavior
-     ******************************************************************/
+/* ---------- Storage keys ---------- */
+const KEYS = {
+  courses: 'uf_courses_v1',
+  watch: 'uf_watch_v1',
+  topics: 'uf_topics_v1',
+  notesRef: 'uf_notesref_v1',
+  tasks: 'uf_tasks_v1',
+  theme: 'uf_theme_v1'
+};
 
-    // --------- CONFIG & PIN (user-provided) ----------
-    const USER_PIN = '19221128662007'; // as provided by you
-    const IDB_NAME = 'uw_unleashed_db_v1';
-    const IDB_STORE = 'uw_notes';
+/* ---------- Default data ---------- */
+function defaultTasks() {
+  return {
+    A: [
+      {name:'Reading',min:60,done:false},
+      {name:'Course Study',min:60,done:false,courseId:null},
+      {name:'News Study',min:30,done:false},
+      {name:'Bible Reading',min:45,done:false}
+    ],
+    B: [
+      {name:'Reading',min:60,done:false},
+      {name:'GED Study',min:60,done:false},
+      {name:'Course Study',min:60,done:false,courseId:null},
+      {name:'News Study',min:30,done:false},
+      {name:'Bible Reading',min:30,done:false}
+    ]
+  };
+}
 
-    // ---------- IndexedDB helpers (promised) ----------
-    function openDB(){ return new Promise((res,rej)=>{ const req = indexedDB.open(IDB_NAME,1); req.onupgradeneeded = e => { const db = e.target.result; if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE); }; req.onsuccess = ()=> res(req.result); req.onerror = e => rej(e); }); }
-    async function idbPut(key,val){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readwrite'); tx.objectStore(IDB_STORE).put(val,key); tx.oncomplete = ()=>res(true); tx.onerror = e=>rej(e); }); }
-    async function idbGet(key){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readonly'); const r = tx.objectStore(IDB_STORE).get(key); r.onsuccess = ()=>res(r.result); r.onerror = e=>rej(e); }); }
-    async function idbDel(key){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readwrite'); tx.objectStore(IDB_STORE).delete(key); tx.oncomplete = ()=>res(true); tx.onerror = e=>rej(e); }); }
-    async function idbKeys(){ const db = await openDB(); return new Promise((res,rej)=>{ const tx = db.transaction(IDB_STORE,'readonly'); const store = tx.objectStore(IDB_STORE); const req = store.getAllKeys(); req.onsuccess = ()=>res(req.result); req.onerror = e=>rej(e); }); }
-
-    // ---------- Encryption helpers (Web Crypto) ----------
-    async function deriveKeyFromPin(pin){ const enc = new TextEncoder().encode(pin); const salt = new Uint8Array([1,2,3,4,5,6,7,8]); const keyMaterial = await crypto.subtle.importKey('raw', enc, {name:'PBKDF2'}, false, ['deriveKey']); const key = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations: 200000, hash:'SHA-256'}, keyMaterial, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']); return key; }
-    async function encryptJson(obj, key){ const iv = crypto.getRandomValues(new Uint8Array(12)); const data = new TextEncoder().encode(JSON.stringify(obj)); const cipher = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, data); const payload = new Uint8Array(cipher); const combined = new Uint8Array(iv.byteLength + payload.byteLength); combined.set(iv,0); combined.set(payload, iv.byteLength); return btoa(String.fromCharCode(...combined)); }
-    async function decryptJson(b64, key){ try{ const raw = Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); const iv = raw.slice(0,12); const data = raw.slice(12); const plain = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, data); return JSON.parse(new TextDecoder().decode(plain)); }catch(e){ throw new Error('Decryption failed'); } }
-
-    // ---------- In-memory app state (lightweight stored in localStorage) ----------
-    const state = {
-      dayA: [{name:'Reading',minutes:60,done:false},{name:'Course Study',minutes:60,done:false,courseId:null},{name:'News Study',minutes:30,done:false},{name:'Bible Reading',minutes:45,done:false}],
-      dayB: [{name:'Reading',minutes:60,done:false},{name:'GED Study',minutes:60,done:false},{name:'Course Study',minutes:60,done:false,courseId:null},{name:'News Study',minutes:30,done:false},{name:'Bible Reading',minutes:30,done:false}],
-      courses: JSON.parse(localStorage.getItem('uw_unleashed_courses')||'[]'),
-      watchLater: JSON.parse(localStorage.getItem('uw_unleashed_watch')||'[]'),
-      topics: JSON.parse(localStorage.getItem('uw_unleashed_topics')||'[]'),
-      quickRefs: JSON.parse(localStorage.getItem('uw_unleashed_qrefs')||'[]'),
-      currentDay: localStorage.getItem('uw_unleashed_day')||'A',
-      sync: JSON.parse(localStorage.getItem('uw_unleashed_sync')||'{}')
+/* ---------- IndexedDB for notes (bodies + versions) ---------- */
+const IDB_NAME = 'uf_notes_db_v1', STORE = 'notes';
+function openDB(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(IDB_NAME, 1);
+    rq.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = e => rej(e);
+  });
+}
+async function idbPut(key, value){
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(value, key);
+    tx.oncomplete = () => res(true);
+    tx.onerror = e => rej(e);
+  });
+}
+async function idbGet(key){
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE,'readonly');
+    const rq = tx.objectStore(STORE).get(key);
+    rq.onsuccess = ()=> res(rq.result);
+    rq.onerror = e=> rej(e);
+  });
+}
+async function idbKeys(){
+  const db = await openDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction(STORE,'readonly');
+    const rq = tx.objectStore(STORE).getAllKeys();
+    rq.onsuccess = ()=> res(rq.result);
+    rq.onerror = e => rej(e);
+  });
+}
 
-    let autosaveTimer = null; function scheduleSave(){ if(autosaveTimer) clearTimeout(autosaveTimer); autosaveTimer = setTimeout(()=>{ saveLightState(); if(syncEnabled()) triggerAutoPush(); }, 250); }
-    function saveLightState(){ localStorage.setItem('uw_unleashed_courses',JSON.stringify(state.courses)); localStorage.setItem('uw_unleashed_watch',JSON.stringify(state.watchLater)); localStorage.setItem('uw_unleashed_topics',JSON.stringify(state.topics)); localStorage.setItem('uw_unleashed_qrefs',JSON.stringify(state.quickRefs)); localStorage.setItem('uw_unleashed_day',state.currentDay); localStorage.setItem('uw_unleashed_sync',JSON.stringify(state.sync)); }
+/* ---------- App state (light metadata in localStorage) ---------- */
+let state = {
+  currentDay: 'A',
+  tasks: ls(KEYS.tasks) || defaultTasks(),
+  courses: ls(KEYS.courses) || [],
+  watch: ls(KEYS.watch) || [],
+  topics: ls(KEYS.topics) || [],
+  notesRef: ls(KEYS.notesRef) || []
+};
 
-    // ---------- PIN lock UI ----------
-    async function showPinLock(){ const html = `
-      <div style="position:fixed;inset:0;background:rgba(6,18,38,0.6);display:flex;align-items:center;justify-content:center;z-index:99999">
-        <div style="background:#fff;padding:20px;border-radius:12px;max-width:420px;width:88%">
-          <h3 style="margin-top:0">Unlock Ultimate Workflow</h3>
-          <p style="color:${'var(--muted)'}">Enter your PIN to unlock all data.</p>
-          <input id="pinInput" placeholder="Enter PIN" style="width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #e6eefc">
-          <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
-            <button id="pinSubmit" class="btn">Unlock</button>
-          </div>
-          <div style="margin-top:8px;color:var(--muted);font-size:13px">Tip: This device will remember the unlocked session until you sign out in Settings.</div>
+/* ---------- Theme system ---------- */
+const themes = {
+  'Cyber Glow': {
+    '--bg': 'linear-gradient(180deg,#061024 0%, #08112a 100%)',
+    '--panel-bg': 'rgba(255,255,255,0.02)',
+    '--card-bg': 'rgba(255,255,255,0.02)',
+    '--muted':'#98a7c0',
+    '--text':'#e6eef8',
+    '--accent':'#00d4ff',
+    '--accent-2':'#7c3aed',
+    '--glass-border':'rgba(255,255,255,0.04)'
+  },
+  'Glass': {
+    '--bg': 'linear-gradient(180deg,#f7f9fc 0%, #eceff5 100%)',
+    '--panel-bg': 'rgba(255,255,255,0.6)',
+    '--card-bg': 'rgba(255,255,255,0.7)',
+    '--muted':'#475569',
+    '--text':'#071035',
+    '--accent':'#4f46e5',
+    '--accent-2':'#7c3aed',
+    '--glass-border':'rgba(0,0,0,0.06)'
+  },
+  'Minimal': {
+    '--bg': 'linear-gradient(180deg,#ffffff 0%, #f4f5f7 100%)',
+    '--panel-bg': 'rgba(255,255,255,0.98)',
+    '--card-bg': 'rgba(255,255,255,1)',
+    '--muted':'#6b7280',
+    '--text':'#071033',
+    '--accent':'#111827',
+    '--accent-2':'#374151',
+    '--glass-border':'rgba(0,0,0,0.06)'
+  },
+  'Neon': {
+    '--bg': 'linear-gradient(135deg,#050816 0%, #0b0f1a 100%)',
+    '--panel-bg': 'rgba(14,6,38,0.6)',
+    '--card-bg': 'rgba(14,6,38,0.45)',
+    '--muted':'#9bb3ff',
+    '--text':'#f8fbff',
+    '--accent':'#ff2d95',
+    '--accent-2':'#6a8bff',
+    '--glass-border':'rgba(255,255,255,0.03)'
+  },
+  'Luxury': {
+    '--bg': 'linear-gradient(180deg,#0b0b0c 0%, #101214 100%)',
+    '--panel-bg': 'rgba(255,255,255,0.02)',
+    '--card-bg': 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))',
+    '--muted':'#b8b0a8',
+    '--text':'#f8f5f2',
+    '--accent':'#f6c85f',
+    '--accent-2':'#d99a2b',
+    '--glass-border':'rgba(255,255,255,0.03)'
+  }
+};
+
+/* Apply theme object to :root */
+function applyTheme(themeObj){
+  const root = document.documentElement;
+  for(const k in themeObj) root.style.setProperty(k, themeObj[k]);
+}
+
+/* Load persisted theme or default */
+const savedTheme = ls(KEYS.theme) || {name:'Cyber Glow', custom:{}};
+if(savedTheme && savedTheme.name && themes[savedTheme.name]) {
+  applyTheme(Object.assign({}, themes[savedTheme.name], savedTheme.custom||{}));
+}
+
+/* Build theme palette UI */
+function buildThemePalette(){
+  const container = $('#themePalette');
+  container.innerHTML = '';
+  Object.keys(themes).forEach(name=>{
+    const btn = document.createElement('div');
+    btn.className = 'theme-chip';
+    btn.textContent = name;
+    btn.addEventListener('click', ()=>{
+      applyTheme(themes[name]);
+      // store selection (no custom picks)
+      ls(KEYS.theme, {name, custom:{}});
+      // update color pickers to match
+      $('#accentPicker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
+      $('#accent2Picker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim());
+      $('#bgPicker').value = rgbToHex(parseBgColor(getComputedStyle(document.documentElement).getPropertyValue('--bg')));
+    });
+    container.appendChild(btn);
+  });
+}
+
+/* Utility: convert rgb/hex to hex, and parse bg gradient for a reasonable single color pick */
+function toHex(c){
+  if(!c) return '#000000';
+  c = c.trim();
+  if(c.startsWith('#')) return c;
+  const m = c.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/);
+  if(m) return '#' + [1,2,3].map(i=> parseInt(m[i]).toString(16).padStart(2,'0')).join('');
+  return '#000000';
+}
+function rgbToHex(s){ try{ return toHex(s); }catch(e){return '#000000';} }
+function parseBgColor(bg){ /* naive: attempt to extract first hex or rgb from gradient */ const m = bg.match(/#([a-fA-F0-9]{6})/); if(m) return '#'+m[1]; const m2 = bg.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(m2) return 'rgb('+m2[1]+','+m2[2]+','+m2[3]+')'; return '#0b1220'; }
+
+/* ---------- UI rendering for tasks, courses, watch, topics, notes ---------- */
+const tasksContainer = $('#tasksContainer');
+function renderTasks(){
+  tasksContainer.innerHTML = '';
+  const list = state.tasks[state.currentDay];
+  list.forEach((t,i)=>{
+    const el = document.createElement('div');
+    el.className = 'task';
+    el.innerHTML = `
+      <div class="task-left">
+        <div class="checkbox" data-index="${i}">${t.done? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+        <div>
+          <div class="task-title">${escapeHtml(t.name)} ${t.courseId? '— '+(findCourse(t.courseId)?.name||'Course'):''}</div>
+          <div class="task-meta">${t.min} min</div>
         </div>
-      </div>`;
-      const wrapper = document.createElement('div'); wrapper.id='pinLockWrapper'; wrapper.innerHTML = html; document.body.appendChild(wrapper);
-      document.getElementById('pinSubmit').addEventListener('click', async ()=>{ const v = document.getElementById('pinInput').value.trim(); if(!v) return alert('Enter PIN'); if(v===USER_PIN){ // derive key and attempt to pull cloud if configured
-            window.__UNLOCK_KEY = await deriveKeyFromPin(v); document.getElementById('pinLockWrapper').remove(); await postUnlockInit(); } else { alert('Incorrect PIN'); } });
-    }
+      </div>
+      <div class="task-actions">
+        <select class="course-select" data-assign="${i}" ${t.name.includes('Course Study')? '':'style="display:none"'}><option value="">Assign</option>${state.courses.map(c=>`<option value="${c.id}" ${t.courseId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select>
+        <button class="btn small" data-timer="${i}">Timer</button>
+        <button class="btn ghost small" data-notes="${i}">Notes</button>
+      </div>
+    `;
+    tasksContainer.appendChild(el);
 
-    // ---------- On unlock initialization ----------
-    async function postUnlockInit(){ // render UI and optionally pull remote
-      renderCurrent(); // if sync configured and gist id exists, try pull
-      if(syncEnabled() && state.sync.gistId){ try{ await pullAndMerge(); }catch(e){ console.warn('sync pull failed',e); } }
-      // show install prompt when available
-    }
+    // events
+    el.querySelector('.checkbox').addEventListener('click', ()=>{
+      t.done = !t.done; scheduleSave(); renderTasks(); updateProgress();
+    });
+    const sel = el.querySelector('[data-assign]');
+    if(sel) sel.addEventListener('change', e=>{ t.courseId = e.target.value || null; scheduleSave(); renderTasks(); });
+    el.querySelector('[data-timer]').addEventListener('click', ()=> startTimer(t.min, t.name));
+    el.querySelector('[data-notes]').addEventListener('click', ()=> openTaskNotes(i));
+  });
+  updateProgress();
+}
 
-    // ---------- Render / UI core ----------
-    function setDay(d){ state.currentDay = d; scheduleSave(); renderCurrent(); }
-    function renderCurrent(){ renderTasks(); renderCourses(); renderWatch(); renderTopics(); renderQuickList(); }
+/* courses */
+function renderCourses(){
+  const el = $('#coursesList'); el.innerHTML = '';
+  if(state.courses.length===0) el.innerHTML = '<div class="small muted">No courses yet</div>';
+  state.courses.forEach((c, i)=>{
+    const d = document.createElement('div'); d.className = 'watch-item';
+    d.innerHTML = `<div><div style="font-weight:700">${escapeHtml(c.name)}</div><div class="small">${escapeHtml(c.url)}</div></div>
+                   <div style="display:flex;gap:8px">
+                     <button class="btn ghost small" data-edit="${i}">Edit</button>
+                     <button class="btn ghost small" data-use="${i}">Use</button>
+                     <button class="btn small" data-del="${i}">Delete</button>
+                   </div>`;
+    el.appendChild(d);
+    d.querySelector('[data-edit]').addEventListener('click', ()=> openCourseEditor(i));
+    d.querySelector('[data-use]').addEventListener('click', ()=> { assignCourseToToday(i); });
+    d.querySelector('[data-del]').addEventListener('click', ()=> { if(confirm('Delete course?')){ state.courses.splice(i,1); scheduleSave(); renderCourses(); renderTasks(); } });
+  });
+}
 
-    function renderTasks(){ const container = document.getElementById('tasksContainer'); container.innerHTML=''; const tasks = state.currentDay==='A'?state.dayA:state.dayB; const q = (document.getElementById('searchTasks').value||'').toLowerCase(); tasks.forEach((t,i)=>{ if(q && !(t.name.toLowerCase().includes(q) || (t.notes||'').toLowerCase().includes(q))) return; const div = document.createElement('div'); div.className='task-row'; const courseLabel = t.courseId ? ` — ${getCourseById(t.courseId)?.name || 'course'}` : ''; div.innerHTML = `
-        <div class='task-left'>
-          <input type='checkbox' ${t.done? 'checked':''} onchange='toggleDone(${i})'>
-          <div style='min-width:160px'>
-            <div class='task-title'>${escapeHtml(t.name+courseLabel)}</div>
-            <div class='task-min'>${t.minutes} min</div>
-          </div>
-        </div>
-        <div class='meta-row'>
-          ${t.name.includes('Course Study')? `<select onchange="assignCourseToTask(this.value, ${i})">${renderCourseOptions(t.courseId)}</select>`: ''}
-          <button class='btn ghost small' onclick='startTimer(${t.minutes},"${escapeHtml(t.name)}")'>Timer</button>
-          <button class='btn ghost small' onclick='openTaskNotes(${i})'>Notes</button>
-        </div>`; container.appendChild(div); }); updateProgress(); }
+/* watch */
+function renderWatch(){
+  const list = $('#watchList'); list.innerHTML = '';
+  if(state.watch.length===0) list.innerHTML = '<div class="small muted">No videos saved</div>';
+  state.watch.forEach((w,i)=>{
+    const el = document.createElement('div'); el.className='watch-item';
+    el.innerHTML = `<div><div style="font-weight:700">${escapeHtml(w.title||w.url)}</div><div class="small">${escapeHtml(w.url)}</div></div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn ghost small" data-open="${i}">Open</button>
+                      <button class="btn ghost small" data-mark="${i}">${w.seen? 'Unmark':'Mark'}</button>
+                      <button class="btn small" data-del="${i}">Del</button>
+                    </div>`;
+    list.appendChild(el);
+    el.querySelector('[data-open]').addEventListener('click', ()=> window.open(w.url,'_blank'));
+    el.querySelector('[data-mark]').addEventListener('click', ()=> { w.seen = !w.seen; scheduleSave(); renderWatch(); });
+    el.querySelector('[data-del]').addEventListener('click', ()=> { state.watch.splice(i,1); scheduleSave(); renderWatch(); });
+  });
+}
 
-    function toggleDone(i){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; tasks[i].done=!tasks[i].done; scheduleSave(); updateProgress(); }
-    function updateProgress(){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; const total=tasks.length; const done=tasks.filter(t=>t.done).length; const pct = total? Math.round((done/total)*100):0; document.getElementById('progressFill').style.width=pct+'%'; document.getElementById('progressText').innerText=pct+'% complete'; document.getElementById('progressCount').innerText=`${done} / ${total}`; }
+/* topics */
+function renderTopics(){
+  const el = $('#topicList'); el.innerHTML = '';
+  if(state.topics.length===0) el.innerHTML = '<div class="small muted">No topics yet</div>';
+  state.topics.forEach((t,i)=>{
+    const e = document.createElement('div'); e.className='topic-item';
+    e.innerHTML = `<div><div style="font-weight:700">${escapeHtml(t.title)}</div><div class="small">${escapeHtml(t.status)}</div></div>
+                   <div style="display:flex;gap:8px">
+                     <button class="btn ghost small" data-open="${i}">Open</button>
+                     <button class="btn small" data-del="${i}">Del</button>
+                   </div>`;
+    el.appendChild(e);
+    e.querySelector('[data-open]').addEventListener('click', ()=> openTopic(i));
+    e.querySelector('[data-del]').addEventListener('click', ()=> { if(confirm('Delete topic?')){ state.topics.splice(i,1); scheduleSave(); renderTopics(); } });
+  });
+}
 
-    // ---------- Courses ----------
-    function renderCourses(){ const el=document.getElementById('coursesSection'); el.innerHTML=''; if(state.courses.length===0) el.innerHTML='<div class="smallmuted">No courses yet — add one.</div>';
-      state.courses.forEach((c,i)=>{ const row=document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='8px'; row.innerHTML = `<div style='flex:1'><a href='${escapeHtml(c.url)}' target='_blank'>${escapeHtml(c.name)}</a><div class='smallmuted'>${escapeHtml(c.url)}</div></div>
-        <div style='display:flex;gap:8px'><button class='btn ghost small' onclick='openCourseEditor(${i})'>Edit</button><button class='btn ghost small' onclick='linkCourseToToday(${i})'>Use Today</button><button class='btn' onclick='removeCourse(${i})'>Delete</button></div>`; el.appendChild(row); }); }
+/* notes (refs shown, bodies in IndexedDB) */
+async function renderNotes(){
+  const list = $('#notesList'); list.innerHTML = '';
+  if(state.notesRef.length===0) list.innerHTML = '<div class="small muted">No quick notes</div>';
+  for(const r of state.notesRef){
+    const el = document.createElement('div'); el.className='note-item';
+    el.innerHTML = `<div><div style="font-weight:700">${escapeHtml(r.tag||'')}</div><div class="small">${escapeHtml(r.summary)}</div></div>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn ghost small" data-open="${r.id}">Open</button>
+                      <button class="btn small" data-del="${r.id}">Del</button>
+                    </div>`;
+    list.appendChild(el);
+    el.querySelector('[data-open]').addEventListener('click', ()=> openNote(r.id));
+    el.querySelector('[data-del]').addEventListener('click', async ()=>{ if(confirm('Delete note?')){ await idbPut('note:'+r.id, null); state.notesRef = state.notesRef.filter(x=>x.id!==r.id); scheduleSave(); renderNotes(); } });
+  }
+}
 
-    function addCourseFromInput(){ const n=document.getElementById('courseName').value.trim(); const u=document.getElementById('courseLink').value.trim(); if(!n||!u) return alert('Please enter both course name and URL'); const id = 'c_'+Date.now(); state.courses.unshift({id,name:n,url:u}); document.getElementById('courseName').value=''; document.getElementById('courseLink').value=''; scheduleSave(); renderCourses(); }
-    function removeCourse(i){ if(!confirm('Delete course?')) return; const id = state.courses[i].id; state.courses.splice(i,1); [state.dayA,state.dayB].forEach(list=>list.forEach(t=>{ if(t.courseId===id) t.courseId=null;})); scheduleSave(); renderCurrent(); }
+/* ---------- Utility & small actions ---------- */
+function findCourse(id){ return state.courses.find(c=>c.id===id); }
+function assignCourseToToday(idx){ const id = state.courses[idx].id; const list = state.tasks[state.currentDay]; const slot = list.find(t=>t.name.includes('Course Study')); if(slot) { slot.courseId = id; scheduleSave(); renderTasks(); } }
+function startTimer(min,label){
+  openModal('Timer — '+label, ()=> { $('#modalBody').value = `Timer: ${min} minutes`; $('#modalMeta').textContent = 'Running'; });
+  const end = Date.now() + min*60000;
+  const ti = setInterval(()=> {
+    const left = Math.max(0, end - Date.now());
+    const m = Math.floor(left/60000);
+    const s = Math.floor((left%60000)/1000);
+    $('#modalBody').value = `Time remaining: ${m}:${String(s).padStart(2,'0')}`;
+    if(left<=0){ clearInterval(ti); $('#modalMeta').textContent='Done'; navigator.vibrate && navigator.vibrate(200); }
+  }, 1000);
+}
 
-    function openCourseEditor(i){ const c = state.courses[i]; openModal(`Course: ${c.name}`, async ()=>{
-        const key = `course:${c.id}`; const data = await idbGet(key) || {notes:'',videos:[],versions:[]}; document.getElementById('modalTag').value = c.name; document.getElementById('modalUrl').value = c.url; document.getElementById('modalBody').value = data.notes||''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0);
-        window._modalSave = async ()=>{ const notes = document.getElementById('modalBody').value; const url = document.getElementById('modalUrl').value.trim(); const tag = document.getElementById('modalTag').value.trim(); c.name = tag || c.name; c.url = url || c.url; const prev = await idbGet(key) || {notes:'',videos:[],versions:[]}; prev.versions = prev.versions || []; prev.versions.unshift({ts:Date.now(),content:notes}); if(prev.versions.length>50) prev.versions.pop(); prev.notes = notes; prev.videos = prev.videos || []; await idbPut(key,prev); scheduleSave(); renderCourses(); alert('Course saved'); };
-      }); }
+/* ---------- Modal helpers ---------- */
+function openModal(title, onOpen){
+  $('#overlay').classList.add('show');
+  $('#modalTitle').textContent = title;
+  $('#modalBody').value = '';
+  $('#modalTitleInput').value = '';
+  $('#modalUrlInput').value = '';
+  $('#modalMeta').textContent = 'Loaded';
+  if(onOpen) onOpen();
+}
+function closeModal(){ $('#overlay').classList.remove('show'); }
 
-    function linkCourseToToday(i){ const id = state.courses[i].id; const tasks = state.currentDay==='A'?state.dayA:state.dayB; const idx = tasks.findIndex(t=>t.name.includes('Course Study')); if(idx===-1) return alert('No Course Study slot found today'); tasks[idx].courseId = id; scheduleSave(); renderTasks(); }
-    function getCourseById(id){ return state.courses.find(c=>c.id===id); }
-    function renderCourseOptions(selected){ let out = '<option value="">— select —</option>'; state.courses.forEach(c=>{ out += `<option value="${c.id}" ${c.id===selected? 'selected':''}>${escapeHtml(c.name)}</option>`; }); return out; }
-    function assignCourseToTask(courseId, taskIndex){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; tasks[taskIndex].courseId = courseId || null; scheduleSave(); renderTasks(); }
+/* ---------- Note & Course editing ---------- */
+async function openNote(id){
+  const data = await idbGet('note:'+id) || {id, tag:'', text:'', versions:[]};
+  openModal('Note', ()=> {
+    $('#modalTitleInput').value = data.tag || '';
+    $('#modalUrlInput').value = '';
+    $('#modalBody').value = data.text || '';
+    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
+    $('#modalSave').onclick = async ()=> {
+      const newText = $('#modalBody').value;
+      data.versions = data.versions || [];
+      data.versions.unshift({ts:Date.now(), text:newText});
+      if(data.versions.length>200) data.versions.pop();
+      data.text = newText;
+      data.tag = $('#modalTitleInput').value;
+      await idbPut('note:'+id, data);
+      const ref = state.notesRef.find(r=>r.id===id);
+      if(ref) ref.summary = newText.substring(0,200);
+      scheduleSave(); renderNotes(); alert('Saved');
+      closeModal();
+    };
+  });
+}
+async function openCourseEditor(idx){
+  const c = state.courses[idx];
+  const data = await idbGet('course:'+c.id) || {notes:'', videos:[], versions:[]};
+  openModal('Course: '+c.name, ()=> {
+    $('#modalTitleInput').value = c.name;
+    $('#modalUrlInput').value = c.url;
+    $('#modalBody').value = data.notes || '';
+    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
+    $('#modalSave').onclick = async ()=> {
+      data.versions = data.versions || [];
+      data.versions.unshift({ts:Date.now(), notes: $('#modalBody').value});
+      if(data.versions.length>200) data.versions.pop();
+      data.notes = $('#modalBody').value;
+      await idbPut('course:'+c.id, data);
+      c.name = $('#modalTitleInput').value || c.name;
+      c.url = $('#modalUrlInput').value || c.url;
+      scheduleSave(); renderCourses(); alert('Course saved'); closeModal();
+    };
+  });
+}
+function openTopic(idx){
+  const t = state.topics[idx];
+  openModal('Topic: '+t.title, ()=> {
+    $('#modalTitleInput').value = (t.tags||[]).join(', ');
+    $('#modalUrlInput').value = t.status;
+    $('#modalBody').value = t.notes || '';
+    $('#modalMeta').textContent = 'topic';
+    $('#modalSave').onclick = async ()=> {
+      t.tags = ($('#modalTitleInput').value||'').split(',').map(x=>x.trim()).filter(Boolean);
+      t.status = $('#modalUrlInput').value || t.status;
+      t.notes = $('#modalBody').value;
+      scheduleSave(); renderTopics(); closeModal(); alert('Saved');
+    };
+  });
+}
+async function openTaskNotes(taskIndex){
+  const key = `task:${state.currentDay}:${taskIndex}`;
+  const data = await idbGet(key) || {notes:'', versions:[]};
+  openModal(state.tasks[state.currentDay][taskIndex].name, ()=> {
+    $('#modalTitleInput').value = '';
+    $('#modalUrlInput').value = '';
+    $('#modalBody').value = data.notes || '';
+    $('#modalMeta').textContent = `Versions: ${data.versions?data.versions.length:0}`;
+    $('#modalSave').onclick = async ()=> {
+      data.versions = data.versions || [];
+      data.versions.unshift({ts:Date.now(), text: $('#modalBody').value});
+      if(data.versions.length>200) data.versions.pop();
+      data.notes = $('#modalBody').value;
+      await idbPut(key, data);
+      scheduleSave(); alert('Saved'); closeModal();
+    };
+  });
+}
 
-    // ---------- Watch Later ----------
-    function renderWatch(){ const list=document.getElementById('watchList'); list.innerHTML=''; if(state.watchLater.length===0) list.innerHTML='<div class="smallmuted">No videos saved.</div>';
-      state.watchLater.forEach((w,i)=>{ const item=document.createElement('div'); item.className='watch-item'; item.innerHTML = `<div><strong>${escapeHtml(w.title||w.url)}</strong><div class='smallmuted'>${escapeHtml(w.url)}</div></div>
-        <div class='watch-actions'><button class='btn ghost small' onclick='openWatch(${i})'>Open</button><button class='btn ghost small' onclick='markWatched(${i})'>Mark</button><button class='btn' onclick='removeWatch(${i})'>Del</button></div>`; list.appendChild(item); }); }
-    function addWatch(){ const t=document.getElementById('wlTitle').value.trim(); const u=document.getElementById('wlUrl').value.trim(); if(!u) return alert('Need a URL'); const id='w_'+Date.now(); state.watchLater.unshift({id,title:t,url:u,seen:false}); document.getElementById('wlTitle').value=''; document.getElementById('wlUrl').value=''; scheduleSave(); renderWatch(); }
-    function openWatch(i){ window.open(state.watchLater[i].url,'_blank'); }
-    function markWatched(i){ state.watchLater[i].seen = !state.watchLater[i].seen; scheduleSave(); renderWatch(); }
-    function removeWatch(i){ state.watchLater.splice(i,1); scheduleSave(); renderWatch(); }
+/* ---------- CRUD UI event hookups ---------- */
+$('#addCourse').addEventListener('click', ()=>{
+  const n = $('#courseName').value.trim(); const u = $('#courseUrl').value.trim();
+  if(!n || !u) return alert('Provide name and URL');
+  state.courses.unshift({id:'c'+Date.now(), name:n, url:u});
+  $('#courseName').value=''; $('#courseUrl').value='';
+  scheduleSave(); renderCourses(); renderTasks();
+});
+$('#addWatch').addEventListener('click', ()=> {
+  const t = $('#wlTitle').value.trim(), u = $('#wlUrl').value.trim();
+  if(!u) return alert('Provide a URL');
+  state.watch.unshift({id:'w'+Date.now(), title:t, url:u, seen:false});
+  $('#wlTitle').value=''; $('#wlUrl').value='';
+  scheduleSave(); renderWatch();
+});
+$('#addTopic').addEventListener('click', ()=> {
+  const t = $('#topicName').value.trim(); const s = $('#topicStatus').value;
+  if(!t) return alert('Title required');
+  state.topics.unshift({id:'t'+Date.now(), title:t, status:s, notes:''});
+  $('#topicName').value=''; scheduleSave(); renderTopics();
+});
+$('#saveQuick').addEventListener('click', async ()=> {
+  const txt = $('#quickNote').value.trim(); const tag = $('#quickTag').value.trim();
+  if(!txt) return alert('Note empty');
+  const id = 'n'+Date.now();
+  const obj = {id, tag, text: txt, versions: [{ts:Date.now(), text: txt}]};
+  state.notesRef.unshift({id, tag, summary: txt.substring(0,200)});
+  await idbPut('note:'+id, obj);
+  $('#quickNote').value=''; $('#quickTag').value='';
+  scheduleSave(); renderNotes();
+});
+$('#modalClose').addEventListener('click', ()=> { closeModal(); });
 
-    // ---------- Topics ----------
-    function renderTopics(){ const list=document.getElementById('topicList'); list.innerHTML=''; if(state.topics.length===0) list.innerHTML='<div class="smallmuted">No topics yet.</div>';
-      state.topics.forEach((t,i)=>{ const node=document.createElement('div'); node.className='topic'; node.innerHTML = `<div style='display:flex;justify-content:space-between;align-items:center'><h4>${escapeHtml(t.title)}</h4>
-          <div class='topic-meta'><span>${escapeHtml(t.status)}</span><button class='btn ghost small' onclick='openTopic(${i})'>Open</button><button class='btn' onclick='removeTopic(${i})'>Del</button></div></div>
-          <div class='smallmuted'>Tags: ${t.tags? t.tags.join(', '): '—'}</div>
-          <div class='notes'>${escapeHtml((t.notes||'').substring(0,240)) || '<em>No notes yet</em>'}</div>`; list.appendChild(node); }); }
-    function addTopic(){ const title=document.getElementById('topicTitle').value.trim(); const status=document.getElementById('topicStatus').value; if(!title) return alert('Title required'); const id='t_'+Date.now(); state.topics.unshift({id,title,status,tags:[],notes:''}); document.getElementById('topicTitle').value=''; scheduleSave(); renderTopics(); }
-    function removeTopic(i){ if(!confirm('Delete topic?')) return; state.topics.splice(i,1); scheduleSave(); renderTopics(); }
-    function openTopic(i){ const t = state.topics[i]; openModal('Topic: '+t.title, ()=>{ document.getElementById('modalTag').value = t.tags? t.tags.join(', '): ''; document.getElementById('modalUrl').value = t.status; document.getElementById('modalBody').value = t.notes || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = 0; window._modalSave = async ()=>{ t.tags = (document.getElementById('modalTag').value||'').split(',').map(s=>s.trim()).filter(Boolean); t.status = document.getElementById('modalUrl').value || t.status; t.notes = document.getElementById('modalBody').value; scheduleSave(); renderTopics(); alert('Saved topic'); }; }); }
+/* day toggles */
+$('#dayA').addEventListener('click', ()=> { state.currentDay='A'; scheduleSave(); renderTasks(); });
+$('#dayB').addEventListener('click', ()=> { state.currentDay='B'; scheduleSave(); renderTasks(); });
 
-    // ---------- Quick Notes (IndexedDB-backed) ----------
-    async function saveQuickNote(){ const text=document.getElementById('quickNote').value.trim(); const tag=document.getElementById('noteTag').value.trim(); if(!text) return alert('Note empty'); const id = 'q_'+Date.now(); const obj={id,tag,text,created:Date.now(),versions:[{ts:Date.now(),text}]}; state.quickRefs.unshift({id,tag,summary:text.substring(0,200)}); scheduleSave(); await idbPut(`note:${id}`, obj); renderQuickList(); document.getElementById('quickNote').value=''; document.getElementById('noteTag').value=''; }
-    async function renderQuickList(){ const el=document.getElementById('quickNotesList'); el.innerHTML=''; state.quickRefs.forEach((r,i)=>{ const d=document.createElement('div'); d.style.padding='8px'; d.style.borderBottom='1px solid #f1f5f9'; d.innerHTML = `<div style='display:flex;justify-content:space-between'><div><strong>${r.tag? '['+escapeHtml(r.tag)+'] ':''}</strong>${escapeHtml(r.summary)}</div><div><button class='btn ghost small' onclick='openQuick("${r.id}")'>Open</button><button class='btn' onclick='delQuick(${i})'>Del</button></div></div>`; el.appendChild(d); }); }
-    async function openQuick(id){ const data = await idbGet(`note:${id}`); if(!data) return alert('Note not found'); openModal('Note', ()=>{ document.getElementById('modalTag').value = data.tag || ''; document.getElementById('modalUrl').value = ''; document.getElementById('modalBody').value = data.text || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0); window._modalSave = async ()=>{ const newText = document.getElementById('modalBody').value; data.versions = data.versions || []; data.versions.unshift({ts:Date.now(),text:newText}); if(data.versions.length>200) data.versions.pop(); data.text = newText; data.tag = document.getElementById('modalTag').value; await idbPut(`note:${id}`,data); const ref = state.quickRefs.find(r=>r.id===id); if(ref) ref.summary = newText.substring(0,200); scheduleSave(); renderQuickList(); alert('Saved'); }; }); }
-    async function delQuick(i){ const id = state.quickRefs[i].id; if(!confirm('Delete note?')) return; state.quickRefs.splice(i,1); scheduleSave(); await idbDel(`note:${id}`); renderQuickList(); }
+/* global search (simple) */
+$('#globalSearch').addEventListener('input', e=> {
+  const q = e.target.value.trim().toLowerCase();
+  // simple filtering: hide tasks that don't match
+  const tasks = document.querySelectorAll('.task');
+  tasks.forEach((el, idx) => {
+    const title = el.querySelector('.task-title').textContent.toLowerCase();
+    el.style.display = title.includes(q) ? 'flex' : 'none';
+  });
+});
 
-    // ---------- Task notes (per-task) ----------
-    async function openTaskNotes(taskIndex){ const tasks = state.currentDay==='A'?state.dayA:state.dayB; const t = tasks[taskIndex]; const key = `task:${state.currentDay}:${taskIndex}`; const data = await idbGet(key) || {notes:'',versions:[]}; openModal(t.name, ()=>{ document.getElementById('modalTag').value = ''; document.getElementById('modalUrl').value = ''; document.getElementById('modalBody').value = data.notes || ''; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = (data.versions?data.versions.length:0); window._modalSave = async ()=>{ const newText = document.getElementById('modalBody').value; data.versions = data.versions || []; data.versions.unshift({ts:Date.now(),text:newText}); if(data.versions.length>200) data.versions.pop(); data.notes = newText; await idbPut(key,data); scheduleSave(); alert('Task notes saved'); }; }); }
+/* ---------- Save scheduling & persistence ---------- */
+let saveTimer = null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=> {
+    ls(KEYS.courses, state.courses);
+    ls(KEYS.watch, state.watch);
+    ls(KEYS.topics, state.topics);
+    ls(KEYS.notesRef, state.notesRef);
+    ls(KEYS.tasks, state.tasks);
+    ls(KEYS.theme, window._theme || ls(KEYS.theme) || {name:'Cyber Glow', custom:{}});
+    ls(KEYS.tasks, state.tasks);
+    // no need to persist IDB as we write there directly
+  }, 220);
+}
 
-    // ---------- Timer ----------
-    let timerInterval=null; function startTimer(min,label){ clearInterval(timerInterval); const end = Date.now() + min*60*1000; const popup = document.getElementById('timerPopup') || createTimerPopup(); popup.style.display='block'; popup.querySelector('h3').innerText = label; function tick(){ const left = Math.max(0, end - Date.now()); const m = Math.floor(left/60000); const s = Math.floor((left%60000)/1000); popup.querySelector('h1').innerText = `${m}:${String(s).padStart(2,'0')}`; if(left<=0){ clearInterval(timerInterval); popup.querySelector('h1').innerText='Done'; navigator.vibrate && navigator.vibrate(200); } } tick(); timerInterval=setInterval(tick,1000); }
-    function createTimerPopup(){ const popup=document.createElement('div'); popup.id='timerPopup'; popup.style= 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--card);padding:18px;border-radius:12px;box-shadow:0 16px 40px rgba(12,18,36,0.2);z-index:9999'; popup.innerHTML = `<h3>Timer</h3><h1>00:00</h1><div style='margin-top:10px;display:flex;gap:8px'><button class='btn' onclick='closeTimer()'>Close</button></div>`; document.body.appendChild(popup); return popup; }
-    function closeTimer(){ const popup=document.getElementById('timerPopup'); if(popup) popup.style.display='none'; clearInterval(timerInterval); }
+/* ---------- Progress ring ---------- */
+function updateProgress(){
+  const list = state.tasks[state.currentDay];
+  const total = list.length;
+  const done = list.filter(t=>t.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  const circumference = 2 * Math.PI * 40;
+  const offset = circumference - (pct/100) * circumference;
+  $('#ringLabel').textContent = pct + '%';
+  $('#progMeta').textContent = `${done} / ${total}`;
+  $('#ringFill').style.strokeDashoffset = offset;
+}
 
-    // ---------- Full IDB export/import (includes notes and versions) ----------
-    async function exportFullDB(){ // gather local state + idb notes
-      const exportObj = {meta: state, notes:{}}; const keys = await idbKeys(); for(const k of keys){ exportObj.notes[k] = await idbGet(k); } const blob = new Blob([JSON.stringify(exportObj)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='uw_full_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url); }
-    async function importFullBackupPrompt(){ const json = prompt('Paste full JSON backup or confirm paste'); if(!json) return; try{ const obj = JSON.parse(json); if(obj.meta){ Object.assign(state,obj.meta); // restore idb notes
-          for(const k of Object.keys(obj.notes||{})){ await idbPut(k,obj.notes[k]); } scheduleSave(); renderCurrent(); alert('Imported full backup'); } }catch(e){ alert('Invalid JSON or import failed'); } }
+/* ---------- Theme pickers & save ---------- */
+buildThemePalette();
+$('#accentPicker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());
+$('#accent2Picker').value = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent-2').trim());
+$('#bgPicker').value = rgbToHex(parseBgColor(getComputedStyle(document.documentElement).getPropertyValue('--bg')));
 
-    // ---------- Cloud sync: GitHub Gist (encrypted) ----------
-    function syncEnabled(){ return !!(state.sync && state.sync.gistId && state.sync.token); }
-    async function triggerAutoPush(){ if(!syncEnabled()) return; // debounce push
-      if(window._pushTimer) clearTimeout(window._pushTimer); window._pushTimer = setTimeout(async ()=>{ try{ await pushEncryptedSnapshot(); }catch(e){ console.warn('push failed',e); } }, 800); }
+/* helpers for color conversions */
+function componentToHex(c){ const v = parseInt(c); return v.toString(16).padStart(2,'0'); }
+function rgbStringToHex(s){
+  const m = s.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(!m) return '#000000'; return '#'+componentToHex(m[1])+componentToHex(m[2])+componentToHex(m[3]);
+}
+function rgbToHex(s){ if(!s) return '#000000'; s=s.trim(); if(s.startsWith('#')) return s; if(s.startsWith('rgb')) return rgbStringToHex(s); return '#000000'; }
 
-    async function createEncryptedSnapshot(){ const key = window.__UNLOCK_KEY; if(!key) throw new Error('No key'); // gather light state + index references, notes remain in IDB but we include small summaries
-      const snapshot = {state: state, timestamp: Date.now()}; const encrypted = await encryptJson(snapshot, key); return encrypted; }
+/* Save custom theme on button */
+$('#saveTheme').addEventListener('click', ()=>{
+  const accent = $('#accentPicker').value;
+  const accent2 = $('#accent2Picker').value;
+  const bg = $('#bgPicker').value;
+  const custom = {'--accent':accent, '--accent-2':accent2, '--bg': `linear-gradient(180deg, ${bg} 0%, ${shadeColor(bg, -8)} 100%)`};
+  applyTheme(Object.assign({}, themes[savedThemeName()] || themes['Cyber Glow'], custom));
+  window._theme = {name: savedThemeName() || 'Custom', custom};
+  ls(KEYS.theme, window._theme);
+  alert('Theme saved locally');
+});
 
-    async function pushEncryptedSnapshot(){ const enc = await createEncryptedSnapshot(); // upload to gist
-      const url = `https://api.github.com/gists/${state.sync.gistId}`; const body = {files:{'uw_encrypted_snapshot.json':{content:enc}}}; const res = await fetch(url,{method:'PATCH',headers:{'Authorization':'token '+state.sync.token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Gist push failed'); state.sync.lastPush = Date.now(); scheduleSave(); }
+/* helper to get currently selected theme name (none selection returns null) */
+function savedThemeName(){
+  // naive: look at computed --accent and compare
+  const ac = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  for(const k in themes){
+    if(themes[k]['--accent'] && (themes[k]['--accent'] === ac || rgbToHex(themes[k]['--accent']) === rgbToHex(ac))) return k;
+  }
+  return null;
+}
 
-    async function pullEncryptedSnapshot(){ if(!syncEnabled()) throw new Error('Sync not configured'); const url = `https://api.github.com/gists/${state.sync.gistId}`; const res = await fetch(url,{headers:{'Authorization':'token '+state.sync.token}}); if(!res.ok) throw new Error('Gist fetch failed'); const data = await res.json(); const file = data.files && data.files['uw_encrypted_snapshot.json']; if(!file) throw new Error('Snapshot missing'); return file.content; }
+/* shade color helper (darken/brighten) */
+function shadeColor(hex, percent){
+  if(!hex.startsWith('#')) return hex;
+  const num = parseInt(hex.slice(1),16);
+  const r = Math.min(255, Math.max(0, ((num >> 16) + Math.round(255*percent/100))));
+  const g = Math.min(255, Math.max(0, (((num >> 8) & 0x00FF) + Math.round(255*percent/100))));
+  const b = Math.min(255, Math.max(0, ((num & 0x0000FF) + Math.round(255*percent/100))));
+  return '#'+ ( (1<<24) + (r<<16) + (g<<8) + b ).toString(16).slice(1);
+}
 
-    async function pullAndMerge(){ const enc = await pullEncryptedSnapshot(); const key = window.__UNLOCK_KEY; const remote = await decryptJson(enc, key); // naive merge: remote replaces local, but keep local versions for IDB notes
-      if(!confirm('Merge remote snapshot into local? OK to overwrite local light state.')) return; // simple overwrite
-      Object.assign(state, remote.state); state.sync.lastPull = Date.now(); scheduleSave(); renderCurrent(); alert('Merged remote snapshot'); }
+/* ---------- Utility: hex from rgb for picker init ---------- */
+function parseBgColor(bg){ const m = bg.match(/#([a-fA-F0-9]{6})/); if(m) return '#'+m[1]; const m2 = bg.match(/rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/); if(m2) return '#' + [1,2,3].map(i=> parseInt(m2[i]).toString(16).padStart(2,'0')).join(''); return '#07172e'; }
 
-    async function createOrConnectGist(token){ // create a private gist if not exists
-      if(!token) throw new Error('token required'); // create gist
-      const body = {public:false,files:{'uw_encrypted_snapshot.json':{content:'INITIAL'}}}; const res = await fetch('https://api.github.com/gists',{method:'POST',headers:{'Authorization':'token '+token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Gist create failed'); const data = await res.json(); state.sync.token = token; state.sync.gistId = data.id; state.sync.lastPush = null; scheduleSave(); return data.id; }
+/* ---------- Initial render ---------- */
+function init(){
+  // ensure tasks exist
+  if(!state.tasks || !state.tasks.A) state.tasks = defaultTasks();
+  // render all blocks
+  renderTasks(); renderCourses(); renderWatch(); renderTopics(); renderNotes(); updateProgress();
+}
+init();
 
-    // ---------- Settings UI ----------
-    function openSettings(){ openModal('Settings', async ()=>{
-        document.getElementById('modalTag').value = state.sync.gistId || ''; document.getElementById('modalUrl').value = state.sync.token || ''; document.getElementById('modalBody').value = 'Settings:
-- To enable GitHub sync, paste a GitHub Personal Access Token with gist scope into the "token" field, and click Save.
-- To change PIN, use Change PIN below.'; document.getElementById('autosaveStatus').innerText='loaded'; document.getElementById('versionCount').innerText = 0; window._modalSave = async ()=>{ const gist = document.getElementById('modalTag').value.trim(); const token = document.getElementById('modalUrl').value.trim(); if(token && !gist){ // create gist for user
-              try{ const id = await createOrConnectGist(token); alert('Gist created: '+id); }catch(e){ alert('Failed to create gist: '+e.message); }
-            } else { state.sync.gistId = gist || state.sync.gistId; state.sync.token = token || state.sync.token; scheduleSave(); alert('Settings saved'); } }; }); }
+/* ---------- Extra UI: Theme modal button ---------- */
+$('#themeBtn').addEventListener('click', ()=> {
+  // focus the small UI area already visible on right - we can animate it or highlight
+  const el = $('#themePalette');
+  el.style.transition = 'transform .28s';
+  el.style.transform = 'scale(1.02)';
+  setTimeout(()=> el.style.transform = 'none', 600);
+});
 
-    // ---------- PIN change flow (re-encrypt remote snapshot) ----------
-    async function changePinFlow(){ const oldPin = prompt('Enter current PIN'); if(oldPin!==USER_PIN) return alert('Current PIN mismatch'); const newPin = prompt('Enter new PIN'); if(!newPin) return alert('Invalid new PIN'); // derive keys
-      const oldKey = await deriveKeyFromPin(oldPin); const newKey = await deriveKeyFromPin(newPin); // if sync enabled, re-encrypt remote snapshot
-      if(syncEnabled()){ try{ const enc = await pullEncryptedSnapshot(); const remote = await decryptJson(enc, oldKey); const reenc = await encryptJson(remote, newKey); // push
-            const url = `https://api.github.com/gists/${state.sync.gistId}`; const body = {files:{'uw_encrypted_snapshot.json':{content:reenc}}}; const res = await fetch(url,{method:'PATCH',headers:{'Authorization':'token '+state.sync.token,'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!res.ok) throw new Error('Push failed'); alert('Remote backup re-encrypted with new PIN'); }catch(e){ alert('Failed to re-encrypt remote: '+e.message); return; } }
-      alert('PIN change completed. Note: you must remember your new PIN'); }
-
-    // ---------- Full IDB export/import helpers (for user) ----------
-    async function exportFullBackupObject(){ const backup = {meta:state, notes:{}}; const keys = await idbKeys(); for(const k of keys){ backup.notes[k] = await idbGet(k); } return backup; }
-    async function importFullBackup(obj){ if(obj.meta) Object.assign(state,obj.meta); for(const k of Object.keys(obj.notes||{})){ await idbPut(k,obj.notes[k]); } scheduleSave(); renderCurrent(); }
-    async function importFullBackupPrompt(){ const data = prompt('Paste full backup JSON here'); if(!data) return; try{ const obj = JSON.parse(data); await importFullBackup(obj); alert('Imported full backup'); }catch(e){ alert('Invalid JSON'); } }
-
-    async function exportFullDB(){ const obj = await exportFullBackupObject(); const blob = new Blob([JSON.stringify(obj)],{type:'application/json'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='uw_full_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url); }
-
-    // ---------- Utility & UI helpers ----------
-    function escapeHtml(str){ return String(str||'').replace(/[&<>\"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function openModal(title,onOpen){ document.getElementById('modalTitle').innerText = title; document.getElementById('noteModal').classList.add('show'); if(onOpen) onOpen(); }
-    function closeModal(){ document.getElementById('noteModal').classList.remove('show'); if(window._modalSave) window._modalSave = null; }
-    async function saveModalNote(){ if(window._modalSave) await window._modalSave(); closeModal(); }
-
-    // ---------- Boot & unlock ----------
-    (async ()=>{
-      // show PIN lock overlay first
-      await showPinLock();
-    })();
-
-    // ---------- Expose some functions for debugging ----------
-    window._uw = {state, saveLightState, idbGet, idbPut, exportFullBackupObject};
-
-    // make sure UI renders when unlocked
-    window.renderCurrent = renderCurrent;
-  </script>
+/* ---------- Expose a few debug methods ---------- */
+window._uf = {
+  state,
+  idbGet, idbPut,
+  save: ()=>{ scheduleSave(); alert('Saved'); },
+  export: async ()=> {
+    const bk = {meta: state, notes:{}};
+    const keys = await idbKeys();
+    for(const k of keys) bk.notes[k] = await idbGet(k);
+    const blob = new Blob([JSON.stringify(bk)], {type:'application/json'});
+    const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = 'uf_backup_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(u);
+  }
+};
+</script>
 </body>
 </html>
-
