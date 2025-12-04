@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flow Enterprise • Editable A/B Scheduler + Notes</title>
+<title>Flow Enterprise Pro • Editable A/B Scheduler + Pomodoro + Notes</title>
 <style>
   :root{--bg:#0d1117;--card:#161b22;--text:#f0f6fc;--accent:#58a6ff;--success:#238636;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(255,255,255,0.05)}
   [data-theme="light"]{--bg:#fafafa;--card:#fff;--text:#24292f;--accent:#0969da;--success:#2ea44f;--danger:#da3633;--warning:#f1c232;--input-bg:rgba(0,0,0,0.05)}
@@ -20,10 +20,11 @@
   select, button{background:var(--card);color:var(--text);border:none;border-radius:8px;padding:10px 14px;font-size:1rem;cursor:pointer}
   .card{background:var(--card);border-radius:16px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.08)}
   .activity{
-    display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;
+    display:grid;grid-template-columns:auto auto 1fr auto auto auto;gap:12px;align-items:center;
     padding:12px;background:var(--input-bg);border-radius:12px;margin:10px 0;
     cursor:grab;
   }
+  .activity input[type=checkbox]{width:20px;height:20px;cursor:pointer}
   .activity:active{cursor:grabbing;opacity:0.7}
   .activity input[type=text]{background:transparent;border:none;color:var(--text);font-size:1.1rem;padding:4px}
   .activity input[type=number]{width:60px;padding:6px;background:var(--input-bg);border-radius:6px;text-align:center}
@@ -46,14 +47,18 @@
   .note-actions button{font-size:0.9rem;padding:4px 8px;background:var(--warning);color:var(--text);border-radius:4px}
   .note-actions button:hover{background:var(--danger)}
   textarea{width:100%;min-height:100px;background:var(--input-bg);color:var(--text);border:none;border-radius:8px;padding:12px}
-  #exportOpts{display:flex;gap:12px;align-items:center;justify-content:center}
+  #exportOpts{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .pomodoro-section{text-align:center}
+  .pomodoro-controls{display:flex;gap:12px;justify-content:center;margin-top:12px}
+  .pomodoro-controls button{background:var(--accent);color:white;padding:10px 20px;border-radius:8px;font-weight:600}
+  .pomodoro-controls button:disabled{opacity:0.5;cursor:not-allowed}
   footer{text-align:center;opacity:0.7;font-size:0.9rem}
 </style>
 </head>
 <body>
 
 <div class="app">
-  <h1>Flow Enterprise</h1>
+  <h1>Flow Enterprise Pro</h1>
 
   <div class="controls">
     <div class="tab active" data-day="A">Day A</div>
@@ -77,6 +82,17 @@
       <div class="progress-text" id="percent">0%</div>
     </div>
 
+    <div class="section pomodoro-section">
+      <h2>Pomodoro Timer</h2>
+      <div class="timer" id="pomoTimer">25:00</div>
+      <div class="pomodoro-controls">
+        <button id="startPomo">Start</button>
+        <button id="pausePomo">Pause</button>
+        <button id="resetPomo">Reset</button>
+      </div>
+      <p id="pomoStatus">Work Session</p>
+    </div>
+
     <div class="section">
       <h2>Notes Bank</h2>
       <textarea id="newNote" placeholder="Add a note..."></textarea>
@@ -95,28 +111,28 @@
     </div>
   </div>
 
-  <footer>Enterprise-grade: Auto-resets daily • Saves logs • Notes never lost</footer>
+  <footer>Enterprise Pro: Auto daily reset • Fail-safe saves • Pomodoro integrated</footer>
 </div>
 
 <script>
-// Enterprise Storage: IndexedDB for robust, fail-safe saving
+// Enterprise Storage: IndexedDB with enhanced error handling
 let db;
-const dbName = 'FlowEnterpriseDB';
-const req = indexedDB.open(dbName, 1);
-req.onerror = () => alert('Storage error - check browser permissions');
+const dbName = 'FlowEnterpriseProDB';
+const req = indexedDB.open(dbName, 2);
+req.onerror = () => alert('Database error - check permissions and try again');
 req.onsuccess = () => { db = req.result; loadAll(); };
 req.onupgradeneeded = e => {
   db = e.target.result;
-  db.createObjectStore('schedules', {keyPath: 'day'});
-  db.createObjectStore('dailyLogs', {keyPath: 'date'});
-  db.createObjectStore('notes', {keyPath: 'id', autoIncrement: true});
-  db.createObjectStore('settings', {keyPath: 'key'});
+  if (!db.objectStoreNames.contains('schedules')) db.createObjectStore('schedules', {keyPath: 'day'});
+  if (!db.objectStoreNames.contains('dailyLogs')) db.createObjectStore('dailyLogs', {keyPath: 'date'});
+  if (!db.objectStoreNames.contains('notes')) db.createObjectStore('notes', {keyPath: 'id', autoIncrement: true});
+  if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', {keyPath: 'key'});
 };
 
 // Defaults
 const defaults = {
-  A: [{name:"Reading", mins:60}, {name:"College Class", mins:60}, {name:"News Study", mins:30}, {name:"Bible Read", mins:45}],
-  B: [{name:"Reading", mins:60}, {name:"GED Study", mins:60}, {name:"College Class", mins:60}, {name:"News Study", mins:30}, {name:"Bible Read", mins:30}]
+  A: [{name:"Reading", mins:60, done:false}, {name:"College Class", mins:60, done:false}, {name:"News Study", mins:30, done:false}, {name:"Bible Read", mins:45, done:false}],
+  B: [{name:"Reading", mins:60, done:false}, {name:"GED Study", mins:60, done:false}, {name:"College Class", mins:60, done:false}, {name:"News Study", mins:30, done:false}, {name:"Bible Read", mins:30, done:false}]
 };
 
 let currentDay = localStorage.getItem("day") || "A";
@@ -125,54 +141,75 @@ let notes = [];
 let timerInterval, timerSeconds = 0;
 let lastResetDate = localStorage.getItem('lastReset') || new Date().toISOString().split('T')[0];
 
+// Pomodoro State
+let pomoInterval, pomoSeconds = 0;
+let isPomoRunning = false;
+let isWork = true;
+let workTime = 25 * 60;
+let breakTime = 5 * 60;
+let pomoStatus = document.getElementById('pomoStatus');
+
 const list = document.getElementById("list");
 const timerEl = document.getElementById("timer");
 const fg = document.querySelector(".fg");
 const notesList = document.getElementById("notesList");
+const pomoTimerEl = document.getElementById('pomoTimer');
 
-// Load All Data
+// Load All
 function loadAll() {
   checkDailyReset();
   loadSchedule();
   loadNotes();
   render();
   renderNotes();
+  updatePomoDisplay();
 }
 
-// Daily Reset: Archive & Reset at New Day
+// Daily Reset & Archive
 function checkDailyReset() {
   const today = new Date().toISOString().split('T')[0];
   if (today !== lastResetDate) {
     archiveDay(lastResetDate);
+    resetDones();
     localStorage.setItem('lastReset', today);
-    // Reset activities 'done' if tracked, but here we don't have 'done' - add if needed
+    lastResetDate = today;
   }
 }
 
-// Archive Day: Save Log to IDB
-function archiveDay(date) {
-  const log = {date, dayType: currentDay, activities: activities.map(a => ({...a, done: false}))}; // Example done
-  const tx = db.transaction('dailyLogs', 'readwrite');
-  tx.objectStore('dailyLogs').put(log);
-  tx.oncomplete = () => console.log(`Archived ${date}`);
-  tx.onerror = () => alert('Archive failed');
+function resetDones() {
+  activities.forEach(a => a.done = false);
+  saveSchedule();
 }
 
-// Load Schedule
+function archiveDay(date) {
+  if (!activities.length) return;
+  const log = {date, dayType: currentDay, activities: activities.map(a => ({...a}))};
+  const tx = db.transaction('dailyLogs', 'readwrite');
+  const store = tx.objectStore('dailyLogs');
+  const putReq = store.put(log);
+  putReq.onsuccess = () => console.log(`Archived ${date}`);
+  putReq.onerror = () => console.error('Archive failed');
+  tx.oncomplete = () => {};
+  tx.onerror = () => alert('Archive error');
+}
+
+// Load/Save Schedule
 function loadSchedule() {
   const tx = db.transaction('schedules');
-  tx.objectStore('schedules').get(currentDay).onsuccess = e => {
-    activities = e.target.result?.acts || defaults[currentDay];
+  const getReq = tx.objectStore('schedules').get(currentDay);
+  getReq.onsuccess = e => {
+    activities = e.target.result?.acts || defaults[currentDay].map(a => ({...a}));
     render();
   };
+  getReq.onerror = () => alert('Load schedule failed');
 }
 
-// Save Schedule (Fail-Safe)
 function saveSchedule() {
   const tx = db.transaction('schedules', 'readwrite');
-  tx.objectStore('schedules').put({day: currentDay, acts: activities});
-  tx.oncomplete = () => console.log('Saved schedule');
-  tx.onerror = () => alert('Save failed - retry');
+  const store = tx.objectStore('schedules');
+  const putReq = store.put({day: currentDay, acts: activities});
+  putReq.onsuccess = () => console.log('Saved');
+  putReq.onerror = () => alert('Save failed');
 }
 
 // Render Activities
@@ -183,6 +220,7 @@ function render() {
     div.className = "activity";
     div.draggable = true;
     div.innerHTML = `
+      <input type="checkbox" ${act.done ? 'checked' : ''} data-i="${i}" class="done">
       <input type="text" value="${act.name}" data-i="${i}" class="name">
       <input type="number" value="${act.mins}" data-i="${i}" class="mins">
       <button data-i="${i}" title="Start timer">&#9654;</button>
@@ -190,8 +228,9 @@ function render() {
     `;
     list.appendChild(div);
 
-    div.querySelector(".name").onblur = e => { activities[i].name = e.target.value; saveSchedule(); };
-    div.querySelector(".mins").onblur = e => { activities[i].mins = parseInt(e.target.value) || 1; saveSchedule(); };
+    div.querySelector(".done").onchange = e => { act.done = e.target.checked; saveSchedule(); render(); };
+    div.querySelector(".name").onblur = e => { act.name = e.target.value; saveSchedule(); };
+    div.querySelector(".mins").onblur = e => { act.mins = parseInt(e.target.value) || 1; saveSchedule(); };
     div.querySelector("button:nth-of-type(1)").onclick = () => startTimer(act.mins);
     div.querySelector("button:nth-of-type(2)").onclick = () => { activities.splice(i,1); saveSchedule(); };
 
@@ -209,21 +248,20 @@ function render() {
     };
   });
 
-  // Progress (based on mins)
-  const total = activities.reduce((a,c)=>a+c.mins,0);
-  const done = 0; // Add done tracking if needed
-  const pct = total ? Math.round((done/total)*100) : 0;
-  fg.style.strokeDashoffset = 377 - (377*pct/100);
-  document.getElementById("percent").textContent = pct+"%";
+  const totalMins = activities.reduce((a,c)=>a+c.mins,0);
+  const doneMins = activities.reduce((a,c)=>a+(c.done ? c.mins : 0),0);
+  const pct = totalMins ? Math.round((doneMins / totalMins) * 100) : 0;
+  fg.style.strokeDashoffset = 377 - (377 * pct / 100);
+  document.getElementById("percent").textContent = pct + "%";
 }
 
 // Add Activity
 document.getElementById("addActBtn").onclick = () => {
-  activities.push({name:"New", mins:30});
+  activities.push({name:"New", mins:30, done:false});
   saveSchedule();
 };
 
-// Timer
+// Activity Timer
 function startTimer(mins) {
   clearInterval(timerInterval);
   timerSeconds = mins * 60;
@@ -232,7 +270,7 @@ function startTimer(mins) {
     const m = String(Math.floor(timerSeconds/60)).padStart(2,"0");
     const s = String(timerSeconds%60).padStart(2,"0");
     timerEl.textContent = `${m}:${s}`;
-    if (timerSeconds <= 0) clearInterval(timerInterval);
+    if (timerSeconds <= 0) { clearInterval(timerInterval); alert('Timer done!'); }
   }, 1000);
   timerEl.textContent = `${String(mins).padStart(2,"0")}:00`;
 }
@@ -260,35 +298,80 @@ themeSel.onchange = e => {
   localStorage.setItem("theme", e.target.value);
 };
 
-// Calendar View (View Past Logs)
+// Calendar Log View
 document.getElementById("calendarBtn").onclick = () => {
   const date = prompt("View log for date (YYYY-MM-DD):");
   if (date) {
     const tx = db.transaction('dailyLogs');
     tx.objectStore('dailyLogs').get(date).onsuccess = e => {
       const log = e.target.result;
-      if (log) alert(`Log for ${date} (${log.dayType} Day):\n` + log.activities.map(a => `${a.name} (${a.mins} min) - Done: ${a.done}`).join('\n'));
-      else alert('No log for that date');
+      if (log) {
+        const done = log.activities.filter(a => a.done).map(a => a.name).join(', ') || 'None';
+        const notDone = log.activities.filter(a => !a.done).map(a => a.name).join(', ') || 'None';
+        alert(`Log for ${date} (${log.dayType} Day):\nDone: ${done}\nNot Done: ${notDone}`);
+      } else alert('No log');
     };
   }
 };
 
-// Weekly View (Simple Text - Accurate to Real Time)
+// Weekly View (Accurate to Date, Assume A on even days, B on odd - Customize)
 document.getElementById("weeklyBtn").onclick = () => {
-  const now = new Date();
+  const now = new Date(2025, 11, 3); // Dec 3, 2025
   const weekStart = new Date(now);
   weekStart.setDate(now.getDate() - now.getDay());
-  let weekStr = 'Weekly Schedule:\n';
+  let weekStr = 'Weekly Schedule (A on even dates, B on odd):\n';
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
-    const dayType = i % 2 === 0 ? 'A' : 'B'; // Example: Alternate A/B by weekday - Customize as needed
+    const dayType = d.getDate() % 2 === 0 ? 'A' : 'B';
     weekStr += `${d.toDateString()}: ${dayType} Day\n`;
   }
   alert(weekStr);
 };
 
-// Notes System (Industry-Grade: Edit, Delete, Search, Export)
+// Pomodoro Timer
+function updatePomoDisplay() {
+  const secs = isWork ? workTime : breakTime;
+  const m = String(Math.floor(secs / 60)).padStart(2, '0');
+  const s = String(secs % 60).padStart(2, '0');
+  pomoTimerEl.textContent = `${m}:${s}`;
+  pomoStatus.textContent = isWork ? 'Work Session' : 'Break Time';
+}
+
+document.getElementById('startPomo').onclick = () => {
+  if (!isPomoRunning) {
+    pomoSeconds = isWork ? workTime : breakTime;
+    isPomoRunning = true;
+    pomoInterval = setInterval(() => {
+      pomoSeconds--;
+      const m = String(Math.floor(pomoSeconds / 60)).padStart(2, '0');
+      const s = String(pomoSeconds % 60).padStart(2, '0');
+      pomoTimerEl.textContent = `${m}:${s}`;
+      if (pomoSeconds <= 0) {
+        clearInterval(pomoInterval);
+        isPomoRunning = false;
+        alert(isWork ? 'Work done! Take a break.' : 'Break over! Back to work.');
+        isWork = !isWork;
+        updatePomoDisplay();
+      }
+    }, 1000);
+    updatePomoDisplay();
+  }
+};
+
+document.getElementById('pausePomo').onclick = () => {
+  clearInterval(pomoInterval);
+  isPomoRunning = false;
+};
+
+document.getElementById('resetPomo').onclick = () => {
+  clearInterval(pomoInterval);
+  isPomoRunning = false;
+  isWork = true;
+  updatePomoDisplay();
+};
+
+// Notes (Unchanged, robust)
 function loadNotes() {
   notes = [];
   const tx = db.transaction('notes');
@@ -303,9 +386,9 @@ function loadNotes() {
 
 function saveNote(note) {
   const tx = db.transaction('notes', 'readwrite');
-  tx.objectStore('notes').add(note);
-  tx.oncomplete = () => loadNotes();
-  tx.onerror = () => alert('Note save failed - retry');
+  const addReq = tx.objectStore('notes').add(note);
+  addReq.onsuccess = loadNotes;
+  addReq.onerror = () => alert('Note save failed');
 }
 
 function updateNote(id, text) {
@@ -314,8 +397,8 @@ function updateNote(id, text) {
     let n = e.target.result;
     n.text = text;
     tx.objectStore('notes').put(n);
-    tx.oncomplete = loadNotes;
   };
+  tx.oncomplete = loadNotes;
 }
 
 function deleteNote(id) {
@@ -352,7 +435,7 @@ document.getElementById('addNoteBtn').onclick = () => {
   }
 };
 
-// Export Notes (Customizable)
+// Export Notes
 document.getElementById('exportNotes').onclick = () => {
   const format = document.getElementById('exportFormat').value;
   const start = document.getElementById('exportStart').value ? new Date(document.getElementById('exportStart').value).getTime() : 0;
@@ -360,7 +443,7 @@ document.getElementById('exportNotes').onclick = () => {
   const filtered = notes.filter(n => n.timestamp >= start && n.timestamp <= end);
 
   let data;
-  if (format === 'json') data = JSON.stringify(filtered);
+  if (format === 'json') data = JSON.stringify(filtered, null, 2);
   else if (format === 'csv') data = 'ID,Time,Text\n' + filtered.map(n => `${n.id},"${new Date(n.timestamp).toLocaleString()}","${n.text.replace(/"/g, '""')}"`).join('\n');
   else if (format === 'txt') data = filtered.map(n => `---\n${new Date(n.timestamp).toLocaleString()}\n${n.text}\n`).join('');
 
@@ -368,7 +451,7 @@ document.getElementById('exportNotes').onclick = () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `notes.${format}`;
+  a.download = `notes_${new Date().toISOString().split('T')[0]}.${format}`;
   a.click();
   URL.revokeObjectURL(url);
 };
