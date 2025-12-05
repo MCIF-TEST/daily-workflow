@@ -2,357 +2,376 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MCIF Weekly Task Scheduler — Enterprise (v2)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="color-scheme" content="dark light">
+<title>MCIF Scheduler — Enterprise (iOS Safari Optimized)</title>
 <link rel="icon" href="data:," />
 <style>
 /* =========================
-   Visual system — modern, calm,
-   dopamine-friendly micro-interactions
+   Visual system (MCIF Lucid Flow)
+   Optimized for iOS Safari
+   - Large touch targets
+   - Momentum scrolling / -webkit-overflow-scrolling
+   - Avoid layout thrash
+   - Dark-first with optional light
    ========================= */
 :root{
-  --bg0: #071021; --bg1:#0f1724; --panel:#071422;
-  --muted:#9fb0bf; --text:#e8f6f3; --accent:#54e0c7; --accent-2:#60a5fa;
-  --danger:#ff7b7b; --glass: rgba(255,255,255,0.03);
-  --radius:12px; --card-radius:14px; --gap:12px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  color-scheme: dark;
-}
-*{box-sizing:border-box}
-html,body{height:100%; margin:0; background: linear-gradient(180deg,var(--bg0),#061422 160%); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale}
-body{
-  padding:18px; display:flex; align-items:flex-start; justify-content:center; font-size:15px; color:var(--text);
+  --bg: #071423;
+  --panel: #0c1b2a;
+  --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+  --muted: #9fb0bf;
+  --text: #e6f6f7;
+  --accent: #4de1c4;
+  --accent2: #66a6ff;
+  --danger: #ff6b6b;
+  --glass: rgba(255,255,255,0.03);
+  --radius: 14px;
+  --gap: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  font-size: 15px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
 }
 
-/* App container */
-.app{
-  width:100%; max-width:1260px; display:grid; gap:18px;
-  grid-template-columns: 1fr; align-content:start;
-  margin-bottom:48px;
-}
+/* Basic layout */
+html,body{height:100%; margin:0; background:linear-gradient(180deg,var(--bg),#05111a 180%); color:var(--text); -webkit-text-size-adjust:100%}
+body{display:flex; align-items:flex-start; justify-content:center; padding:calc(16px + var(--safe-top)) 12px calc(24px + var(--safe-bottom));}
+
+/* App shell */
+.app{width:100%; max-width:1220px; display:grid; gap:18px; grid-template-columns: 1fr;}
 
 /* Header */
-.header{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-}
-.brand{
-  display:flex; gap:12px; align-items:center;
-}
-.logo{
-  width:48px; height:48px; border-radius:10px; display:grid; place-items:center;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#012329; font-weight:800;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-}
-.title{line-height:1}
-.title h1{margin:0;font-size:18px}
-.title p{margin:0;color:var(--muted);font-size:13px}
+.header{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px}
+.brand{display:flex; gap:12px; align-items:center}
+.logo{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#032427;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+.header h1{margin:0;font-size:18px}
+.header p{margin:0;font-size:13px;color:var(--muted)}
 
-/* Top controls */
-.controls{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-.btn{
-  background:var(--glass); color:var(--accent); border:1px solid rgba(255,255,255,0.03);
-  padding:8px 12px; border-radius:999px; cursor:pointer; font-weight:700;
-}
-.btn.ghost{background:transparent;color:var(--muted); border:1px solid rgba(255,255,255,0.02)}
-.btn.danger{background:linear-gradient(90deg,#3b0f0f,#5b1b1b); color:white}
-.kbd{background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:8px; font-weight:700; font-size:13px}
+/* Controls */
+.controls{display:flex;gap:8px;align-items:center}
+.btn{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:999px;color:var(--accent);font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.02)}
+.kbd{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:8px;font-weight:700;color:var(--muted)}
 
-/* Main grid */
-.main{
-  display:grid; grid-template-columns: 360px 1fr; gap:18px;
-}
+/* Main */
+.main{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
 
-/* Left panel */
-.panel{
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
-  border-radius:var(--card-radius); padding:14px; border:1px solid rgba(255,255,255,0.03);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-.form-row{display:flex; gap:8px; align-items:center}
-label{display:block; font-size:13px; color:var(--muted); margin-top:10px}
-.input,select,textarea{width:100%; padding:10px; margin-top:6px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; outline:none}
-.small{font-size:13px; color:var(--muted)}
-.toggle{display:flex; gap:8px; align-items:center}
+/* Left panel (controls) */
+.panel{background:var(--card);border-radius:var(--radius);padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 12px 40px rgba(0,0,0,0.5)}
+label{display:block;color:var(--muted);font-size:13px;margin-top:8px}
+.input,textarea,select{width:100%;padding:10px;margin-top:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);outline:none;font-size:15px}
+.text-muted{color:var(--muted);font-size:13px}
+.small{font-size:13px}
 
-/* Week header (right side) */
-.week-header{
-  display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));
-  border:1px solid rgba(255,255,255,0.02);
-}
+/* Toggles/rows */
+.row{display:flex;gap:8px;align-items:center}
+.row .btn{padding:8px 10px}
 
-/* Week grid */
-.grid-wrap{overflow:auto; min-height:460px; padding:6px}
-.week-grid{display:grid; grid-template-columns: repeat(7,1fr); gap:12px; align-items:start}
-.day-col{
-  background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02)); border-radius:12px; padding:10px; min-height:220px;
-  display:flex; flex-direction:column; gap:8px; border:1px solid rgba(255,255,255,0.02);
-  transition: box-shadow .18s ease, transform .12s ease;
-}
-.day-col.today{box-shadow: 0 10px 40px rgba(84,224,199,0.06); transform:translateY(-2px)}
-.day-header{display:flex; justify-content:space-between; align-items:center}
+/* Week header and timeline area */
+.right{display:flex;flex-direction:column;gap:12px}
+
+/* Week header */
+.week-header{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));border:1px solid rgba(255,255,255,0.02)}
+.week-range{font-weight:800}
+.timezone{font-size:13px;color:var(--muted)}
+
+/* Grid / Week view */
+.grid-wrap{overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:24px}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;align-items:start}
+.day-col{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.02));border-radius:12px;padding:10px;min-height:320px;border:1px solid rgba(255,255,255,0.02);display:flex;flex-direction:column}
+.day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .day-name{font-weight:800}
-.day-date{font-size:12px; color:var(--muted)}
+.day-date{font-size:12px;color:var(--muted)}
+.task-list{display:flex;flex-direction:column;gap:8px;overflow:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch}
 
 /* Task card */
-.task{
-  display:flex; gap:8px; align-items:center; padding:8px; border-radius:10px; cursor:grab; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.04));
-  border:1px solid rgba(255,255,255,0.02); transition: transform .12s ease, box-shadow .12s ease;
-}
-.task.dragging{opacity:0.6; transform:scale(.992); cursor:grabbing}
-.task:hover{box-shadow: 0 8px 30px rgba(0,0,0,0.45)}
-.task .time{min-width:62px; font-weight:800; color:var(--muted); font-size:13px}
-.task .title{flex:1; font-weight:600}
-.task .meta{font-size:12px; color:var(--muted)}
-.task.complete{opacity:0.5; text-decoration:line-through}
+.task{display:flex;gap:8px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.04));border:1px solid rgba(255,255,255,0.02);cursor:grab;user-select:none;touch-action:none}
+.task.dragging{opacity:0.7;transform:scale(.995)}
+.task .time{min-width:60px;font-weight:800;color:var(--muted);font-size:13px}
+.task .title{flex:1;font-weight:700}
+.task .meta{font-size:12px;color:var(--muted)}
+.chips{display:flex;gap:6px}
+.chip{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);cursor:pointer;font-weight:700}
 
-/* Action chips */
-.chips{display:flex; gap:6px}
-.chip{padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.02); cursor:pointer; font-weight:700}
+/* Timeline / day detail (time-grid) */
+.timeline{margin-top:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));border-radius:12px;padding:10px;border:1px solid rgba(255,255,255,0.02)}
+.time-grid{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow:auto;padding:6px 4px;-webkit-overflow-scrolling:touch}
+.time-row{display:flex;align-items:center;gap:8px;padding:10px;border-radius:10px;background:transparent;transition:background .12s ease}
+.time-label{width:64px;font-weight:700;color:var(--muted);font-size:13px}
+.time-slot{flex:1;min-height:44px;border-radius:10px;border:1px dashed rgba(255,255,255,0.02);display:flex;align-items:center;padding:6px;gap:8px}
 
-/* Modal */
-.modal-backdrop{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80}
+/* Modal (edit) */
+.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:120}
 .modal-backdrop.show{display:flex}
-.modal{width:520px; max-width:96%; background:linear-gradient(180deg,#071b1b,#081221); border-radius:12px; padding:16px; border:1px solid rgba(255,255,255,0.03); box-shadow:0 20px 60px rgba(0,0,0,0.7)}
-.modal h3{margin:0}
-.field{margin-top:10px}
+.modal{width:520px;max-width:94%;background:linear-gradient(180deg,#071a1b,#061321);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 30px 80px rgba(0,0,0,0.7)}
+.modal h3{margin:0 0 6px 0}
+.modal .field{margin-top:8px}
 
-/* Toast */
-.toasts{position:fixed; right:18px; bottom:18px; display:flex; flex-direction:column; gap:8px; z-index:100}
-
-/* Archive list */
-.archives{margin-top:12px; max-height:220px; overflow:auto; padding:8px; border-radius:10px; background:rgba(255,255,255,0.01)}
+/* Toasts (in-app fallback + notifications) */
+.toasts{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:150}
+.toast{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(0,0,0,0.6);color:var(--text);font-weight:700;}
 
 /* Responsive */
-@media(max-width:980px){
-  .main{grid-template-columns: 1fr; }
-  .week-grid{grid-template-columns: repeat(2,1fr)}
+@media(max-width:1000px){
+  .main{grid-template-columns:1fr}
+  .week-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:520px){
-  .week-grid{grid-template-columns: 1fr}
+  .week-grid{grid-template-columns:1fr}
+  .header h1{font-size:17px}
   .logo{width:40px;height:40px}
 }
 </style>
 </head>
 <body>
-<div class="app" role="application" aria-label="MCIF Weekly Task Scheduler">
-  <div class="header">
+<div class="app" role="application" aria-label="MCIF Weekly Scheduler">
+  <header class="header">
     <div class="brand">
       <div class="logo" aria-hidden="true">MCIF</div>
-      <div class="title">
-        <h1>Weekly Task Scheduler</h1>
-        <p>Plan tasks by day and assign exact times — weekly ISA reset, audit-ready archive</p>
+      <div>
+        <h1>MCIF Weekly Scheduler</h1>
+        <p>Plan tasks by day • Assign exact times • Weekly archive (ISO week)</p>
       </div>
     </div>
 
-    <div class="controls" role="toolbar" aria-label="Top controls">
-      <div id="weekKeyBadge" class="kbd" aria-live="polite">—</div>
+    <div class="controls" role="toolbar" aria-label="Top actions">
+      <div id="weekBadge" class="kbd" aria-live="polite">—</div>
       <button id="prevWeek" class="btn ghost" title="Previous week">◀</button>
       <button id="nextWeek" class="btn ghost" title="Next week">▶</button>
-      <button id="todayBtn" class="btn" title="Jump to current week (today)">Today</button>
-      <button id="exportBtn" class="btn ghost" title="Export current week JSON">Export</button>
-      <button id="undoBtn" class="btn ghost" title="Undo last action">Undo</button>
+      <button id="todayBtn" class="btn" title="Jump to current week">Today</button>
+      <button id="notifyPermBtn" class="btn ghost" title="Enable notifications">Notify</button>
     </div>
-  </div>
+  </header>
 
   <div class="main">
-    <!-- LEFT: controls + create -->
+    <!-- Left: controls & create -->
     <aside class="panel" aria-labelledby="createHeading">
       <h2 id="createHeading" style="margin:0">Create Task</h2>
-      <div class="small" style="margin-top:6px">Assign to a day, pick a time, add notes. Keyboard: <span class="kbd">⌘/Ctrl + Enter</span> to quick-add.</div>
+      <div class="text-muted small" style="margin-top:6px">Use <strong>⌘/Ctrl + Enter</strong> to quick add. Tasks are stored per ISO week (Mon–Sun).</div>
 
-      <div class="field">
-        <label for="taskTitle">Title</label>
-        <input id="taskTitle" class="input" type="text" placeholder="e.g., Finish slides for talk" autocomplete="off" />
-      </div>
+      <label for="taskTitle">Title</label>
+      <input id="taskTitle" class="input" placeholder="Write a concise task (eg. Draft email to Dr. X)" autocomplete="off" />
 
-      <div class="form-row field">
+      <div class="row" style="margin-top:8px;">
         <div style="flex:1">
           <label for="taskDay">Day</label>
-          <select id="taskDay" class="input"></select>
+          <select id="taskDay" class="input" aria-label="Select day"></select>
         </div>
-        <div style="width:135px">
+        <div style="width:140px">
           <label for="taskTime">Time</label>
           <input id="taskTime" class="input" type="time" />
         </div>
       </div>
 
-      <div class="field">
-        <label for="taskNotes">Notes (optional)</label>
-        <textarea id="taskNotes" class="input" rows="3" placeholder="Add steps, links, pomodoro count..."></textarea>
+      <label for="taskNotes">Notes (optional)</label>
+      <textarea id="taskNotes" rows="3" class="input" placeholder="Notes, steps, links..."></textarea>
+
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button id="addBtn" class="btn">Add Task</button>
+        <button id="clearBtn" class="btn ghost">Clear Week</button>
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:12px;">
-        <button id="addTaskBtn" class="btn">Add Task</button>
-        <button id="clearWeekBtn" class="btn ghost" title="Clear this week's tasks">Clear Week</button>
-        <button id="importBtn" class="btn ghost" title="Import tasks JSON">Import</button>
-      </div>
-
-      <div style="margin-top:14px;" class="small">
-        <label class="toggle"><input id="autoReset" type="checkbox" checked /> Reset each ISO week (archive)</label>
-        <label class="toggle" style="margin-top:6px"><input id="autoSort" type="checkbox" checked /> Auto-sort tasks by time</label>
+      <div style="margin-top:12px;" class="small text-muted">
+        <label><input id="autoReset" type="checkbox" checked /> Reset/Archive old weeks automatically</label><br/>
+        <label><input id="autoSort" type="checkbox" checked /> Auto-sort tasks by time</label>
       </div>
 
       <div style="margin-top:14px;">
-        <strong>Archives</strong>
-        <div id="archiveList" class="archives small" aria-live="polite">No archives yet — old weeks auto-archived here.</div>
+        <strong class="small">Multi-day Templates</strong>
+        <div class="text-muted small" style="margin-top:6px">Create reusable task bundles (templates) and apply them to any day.</div>
+        <label for="templateName">Template name</label>
+        <input id="templateName" class="input" placeholder="e.g., Morning Focus" />
+        <label for="templateBody" class="small">One task per line as "HH:MM — Title"</label>
+        <textarea id="templateBody" class="input" rows="3" placeholder="08:30 — Morning journaling\n09:00 — Deep work block"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="saveTemplate" class="btn">Save Template</button>
+          <button id="applyTemplate" class="btn ghost">Apply to Day</button>
+        </div>
+        <div id="templatesList" style="margin-top:10px" class="small text-muted">No templates yet.</div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <strong class="small">Archives</strong>
+        <div id="archives" style="margin-top:8px;max-height:160px;overflow:auto;padding:8px;border-radius:10px" class="text-muted small">No archives yet.</div>
       </div>
     </aside>
 
-    <!-- RIGHT: week view -->
-    <section>
+    <!-- Right: week grid and timeline -->
+    <section class="right">
       <div class="week-header">
         <div>
-          <div id="weekRange" style="font-weight:800">—</div>
-          <div class="small" id="weekHint">Week view — Mon–Sun</div>
+          <div id="weekRange" class="week-range">—</div>
+          <div id="weekHint" class="text-muted small">Week view (Mon–Sun)</div>
         </div>
-        <div class="small">Timezone: <span id="tzName"></span></div>
+        <div class="timezone text-muted small">Timezone: <span id="tzName"></span></div>
       </div>
 
-      <div class="grid-wrap" style="margin-top:12px;">
-        <div id="weekGrid" class="week-grid" role="list" aria-label="Week tasks"></div>
+      <div class="grid-wrap">
+        <div id="weekGrid" class="week-grid" role="list" aria-label="Week tasks">
+          <!-- day columns inserted by script -->
+        </div>
+
+        <!-- Day timeline panel (shows when a day column is tapped) -->
+        <div id="timelinePanel" class="timeline" aria-hidden="true" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><strong id="timelineDayLabel">Day</strong> <span id="timelineDate" class="text-muted small"></span></div>
+            <div class="small text-muted">Drag tasks into slots • Tap task to edit</div>
+          </div>
+          <div id="timeGrid" class="time-grid" role="list" aria-label="Time grid">
+            <!-- rows 06:00 - 22:00 inserted by script -->
+          </div>
+        </div>
       </div>
     </section>
   </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Modal -->
 <div id="modal" class="modal-backdrop" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <h3 id="modalTitle">Edit Task</h3>
     <div class="field">
-      <label for="editTitle">Title</label>
+      <label class="small">Title</label>
       <input id="editTitle" class="input" />
     </div>
-    <div class="form-row field">
+    <div class="row field">
       <div style="flex:1">
-        <label for="editDay">Day</label>
+        <label class="small">Day</label>
         <select id="editDay" class="input"></select>
       </div>
-      <div style="width:140px">
-        <label for="editTime">Time</label>
+      <div style="width:150px">
+        <label class="small">Time</label>
         <input id="editTime" class="input" type="time" />
       </div>
     </div>
     <div class="field">
-      <label for="editNotes">Notes</label>
-      <textarea id="editNotes" class="input" rows="4"></textarea>
+      <label class="small">Notes</label>
+      <textarea id="editNotes" class="input" rows="3"></textarea>
     </div>
-
-    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:12px;">
-      <button id="deleteBtn" class="btn ghost">Delete</button>
-      <button id="closeModal" class="btn ghost">Cancel</button>
-      <button id="saveBtn" class="btn">Save</button>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+      <button id="deleteTaskBtn" class="btn ghost">Delete</button>
+      <button id="closeModalBtn" class="btn ghost">Cancel</button>
+      <button id="saveTaskBtn" class="btn">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
+<!-- Toasts -->
 <div id="toasts" class="toasts" aria-live="polite"></div>
 
 <script>
-/*
-  MCIF Weekly Task Scheduler — v2
-  Improvements (5× better):
-  - Modular code structure + strong comments
-  - Inline edit modal (no prompts) + keyboard accessibility
-  - Undo stack for last operations
-  - Non-blocking toasts instead of alerts
-  - Smooth drag & drop + keyboard friendly actions
-  - Deterministic ISO-week handling + prev/next week navigation
-  - Audit-safe archived weeks with size cap & download
-  - Cleaner UX & accessibility improvements
-*/
-
 /* =========================
-   Utilities & constants
+   MCIF Enterprise Scheduler — single-file app
+   Features:
+   - ISO week (Monday-first) persistence and archive
+   - Week view (7 columns) + per-day time-grid timeline (06:00 - 22:00)
+   - Assign time, drag & drop (touch-friendly), inline edit modal
+   - Multi-day templates (save/apply)
+   - Notifications API integration + in-app toasts
+   - Archive cap and audit metadata
+   - iOS Safari optimizations (touch targets, momentum scrolling)
+   - Undo stack (simple last-state restore)
    ========================= */
+
+/* ---------- Utilities ---------- */
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const STORAGE_PREFIX = 'mcif_scheduler_v2';
+const STORAGE_PREFIX = 'mcif_scheduler_enterprise_v1';
 const SETTINGS_KEY = `${STORAGE_PREFIX}_settings`;
 const ARCHIVE_INDEX_KEY = `${STORAGE_PREFIX}_archives`;
-const MAX_ARCHIVE_ENTRIES = 64; // cap to prevent uncontrolled localStorage growth
+const MAX_ARCHIVES = 64;
+const SNAPSHOT_UNDO_LIMIT = 20;
+const START_HOUR = 6;
+const END_HOUR = 22;
 
-function uid(prefix='id'){ return `${prefix}_${Math.random().toString(36).slice(2,9)}`; }
+/* small helper */
+function uid(pref='id'){ return `${pref}_${Math.random().toString(36).slice(2,9)}`; }
 
-/* ISO week functions (Monday-first) */
-function getISOWeekKey(date = new Date()){
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+/* ISO week functions (Monday as day 1) */
+function getISOWeekKey(d = new Date()){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
 }
 
-/* Get Monday date of week for display */
-function startOfISOWeek(date = new Date()){
-  const day = new Date(date);
-  const isoDay = (day.getDay() + 6) % 7; // 0=Mon
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate() - isoDay);
+/* Monday date of that week for display */
+function startOfISOWeek(d = new Date()){
+  const dt = new Date(d);
+  const isoDay = (dt.getDay() + 6) % 7; // 0 = Monday
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() - isoDay);
 }
 
-/* format week range like "Dec 1 – Dec 7, 2025" */
-function weekRangeText(date = new Date()){
-  const mon = startOfISOWeek(date);
+/* format range */
+function weekRangeText(d = new Date()){
+  const mon = startOfISOWeek(d);
   const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
   const opts = { month:'short', day:'numeric' };
-  if (mon.getFullYear() === sun.getFullYear()){
+  if (mon.getFullYear() === sun.getFullYear()) {
     return `${mon.toLocaleDateString(undefined,opts)} – ${sun.toLocaleDateString(undefined,opts)}, ${sun.getFullYear()}`;
   }
   return `${mon.toLocaleDateString(undefined,opts)} ${mon.getFullYear()} – ${sun.toLocaleDateString(undefined,opts)} ${sun.getFullYear()}`;
 }
 
-/* Storage helpers */
+/* storage helpers */
 const storage = {
-  save(key, value){ localStorage.setItem(key, JSON.stringify(value)); },
-  load(key, fallback=null){ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; },
-  remove(key){ localStorage.removeItem(key); }
+  save(k,v){ localStorage.setItem(k, JSON.stringify(v)); },
+  load(k, fallback=null){ const r = localStorage.getItem(k); return r ? JSON.parse(r) : (fallback===undefined?null:fallback); },
+  remove(k){ localStorage.removeItem(k); }
 };
 
-/* Small, polite toast system */
+/* toast system */
 const toastsEl = document.getElementById('toasts');
-function toast(msg, opts={time:3000}){
-  const id = uid('toast');
-  const t = document.createElement('div');
-  t.id = id;
-  t.className = 'toast small';
-  t.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03))';
-  t.style.padding = '8px 12px'; t.style.borderRadius='10px'; t.style.border='1px solid rgba(255,255,255,0.03)';
-  t.textContent = msg;
-  toastsEl.appendChild(t);
-  setTimeout(()=> { t.style.opacity = '0'; t.addEventListener('transitionend', ()=> t.remove()); }, opts.time);
+function toast(msg, time=3500){
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
+  toastsEl.appendChild(el);
+  setTimeout(()=> { el.style.opacity = '0'; el.addEventListener('transitionend', ()=> el.remove()); }, time);
 }
 
-/* Undo: keep last 12 actions */
-class UndoStack {
-  constructor(limit=12){ this.stack = []; this.limit = limit; }
+/* Notifications: ask for permission then show via Notifications API if allowed + fallback toast */
+async function requestNotificationPermission(){
+  if (!('Notification' in window)) { toast('Notifications not supported in this browser'); return false; }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission !== 'denied') {
+    const p = await Notification.requestPermission();
+    return p === 'granted';
+  }
+  return false;
+}
+function sendNotification(title, body = '') {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, badge: undefined });
+  } else {
+    toast(title + (body ? (' — ' + body) : ''));
+  }
+}
+
+/* Undo stack (serialize shallow snapshot of tasks & weekKey) */
+class Undo {
+  constructor(limit=SNAPSHOT_UNDO_LIMIT){ this.limit=limit; this.stack=[]; }
   push(snapshot){ this.stack.push(JSON.stringify(snapshot)); if (this.stack.length>this.limit) this.stack.shift(); }
-  pop(){ const s = this.stack.pop(); return s ? JSON.parse(s) : null; }
+  pop(){ const s=this.stack.pop(); return s?JSON.parse(s):null; }
 }
-const undoStack = new UndoStack(20);
+const undo = new Undo();
 
-/* =========================
-   App state
-   ========================= */
+/* ---------- App state ---------- */
 const app = {
-  weekDate: new Date(),           // date inside the currently visible week
-  weekKey: getISOWeekKey(),       // computed key for storage
-  tasks: {},                      // { 0: [task], 1: [...], ... 6: [...] }
-  settings: {
-    autoReset: true,
-    autoSort: true
-  },
-  archives: []                    // list of archived week keys (most recent first)
+  weekDate: new Date(), // any date inside the visible week
+  weekKey: getISOWeekKey(new Date()),
+  tasks: {},   // {0: [task], 1:[], ... 6:[]} dayIndex 0=Mon
+  settings: { autoReset: true, autoSort: true },
+  archives: [], // list of week keys (most recent first)
+  templates: {} // name => array of {time,title,notes}
 };
 
-/* Task shape:
-  { id, title, notes, day(0..6), time:"HH:MM" | "", complete:bool, createdAt:timestamp }
+/* Task object:
+  { id, title, notes, day(0..6), time:"HH:MM" or "", complete:bool, createdAt:ts, updatedAt:ts }
 */
 
-/* =========================
-   DOM refs
-   ========================= */
+/* ---------- DOM refs ---------- */
 const refs = {
-  weekKeyBadge: document.getElementById('weekKeyBadge'),
+  weekBadge: document.getElementById('weekBadge'),
   weekRange: document.getElementById('weekRange'),
   tzName: document.getElementById('tzName'),
   weekGrid: document.getElementById('weekGrid'),
@@ -360,111 +379,98 @@ const refs = {
   taskTitle: document.getElementById('taskTitle'),
   taskTime: document.getElementById('taskTime'),
   taskNotes: document.getElementById('taskNotes'),
-  addTaskBtn: document.getElementById('addTaskBtn'),
-  clearWeekBtn: document.getElementById('clearWeekBtn'),
-  exportBtn: document.getElementById('exportBtn'),
-  importBtn: document.getElementById('importBtn'),
+  addBtn: document.getElementById('addBtn'),
+  clearBtn: document.getElementById('clearBtn'),
   prevWeek: document.getElementById('prevWeek'),
   nextWeek: document.getElementById('nextWeek'),
   todayBtn: document.getElementById('todayBtn'),
+  notifyPermBtn: document.getElementById('notifyPermBtn'),
   autoReset: document.getElementById('autoReset'),
   autoSort: document.getElementById('autoSort'),
-  archiveList: document.getElementById('archiveList'),
-  modalBackdrop: document.getElementById('modal'),
+  templatesList: document.getElementById('templatesList'),
+  saveTemplateBtn: document.getElementById('saveTemplate'),
+  applyTemplateBtn: document.getElementById('applyTemplate'),
+  templateName: document.getElementById('templateName'),
+  templateBody: document.getElementById('templateBody'),
+  archivesDiv: document.getElementById('archives'),
+  timelinePanel: document.getElementById('timelinePanel'),
+  timeGrid: document.getElementById('timeGrid'),
+  timelineDayLabel: document.getElementById('timelineDayLabel'),
+  timelineDate: document.getElementById('timelineDate'),
+  modal: document.getElementById('modal'),
   editTitle: document.getElementById('editTitle'),
   editDay: document.getElementById('editDay'),
   editTime: document.getElementById('editTime'),
   editNotes: document.getElementById('editNotes'),
-  saveBtn: document.getElementById('saveBtn'),
-  closeModal: document.getElementById('closeModal'),
-  deleteBtn: document.getElementById('deleteBtn'),
-  undoBtn: document.getElementById('undoBtn')
+  saveTaskBtn: document.getElementById('saveTaskBtn'),
+  closeModalBtn: document.getElementById('closeModalBtn'),
+  deleteTaskBtn: document.getElementById('deleteTaskBtn')
 };
 
-/* =========================
-   Persistence keys
-   ========================= */
-function tasksKey(k){ return `${STORAGE_PREFIX}_tasks_${k}`; }
-function archiveKey(k){ return `${STORAGE_PREFIX}_archive_${k}`; }
-
-/* =========================
-   Initialization
-   ========================= */
+/* ---------- Initialization ---------- */
 function init(){
-  // Load settings
+  // load settings & archives
   const s = storage.load(SETTINGS_KEY, null);
   if (s) app.settings = s;
+  const archives = storage.load(ARCHIVE_INDEX_KEY, null);
+  if (archives) app.archives = archives;
+  const templates = storage.load(`${STORAGE_PREFIX}_templates`, null);
+  if (templates) app.templates = templates;
+
   refs.autoReset.checked = !!app.settings.autoReset;
   refs.autoSort.checked = !!app.settings.autoSort;
 
-  // Load archives index
-  app.archives = storage.load(ARCHIVE_INDEX_KEY, []) || [];
-
-  // Prepare day selectors (create & edit)
+  // populate days select
   refs.taskDay.innerHTML = DAYS.map((d,i)=>`<option value="${i}">${d}</option>`).join('');
   refs.editDay.innerHTML = refs.taskDay.innerHTML;
 
-  // tz
   refs.tzName.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
 
-  // Determine current weekKey relative to app.weekDate
+  // set week context and load tasks
   app.weekKey = getISOWeekKey(app.weekDate);
-
-  // handle weekly reset (auto archive) for existing stored weeks
-  handleWeeklyResetOnLoad();
-
-  // If tasks exist for weekKey load them; else init empty
   const loaded = storage.load(tasksKey(app.weekKey), null);
   if (loaded) app.tasks = loaded;
-  else { initEmptyTasks(); saveTasks(); }
+  else initEmptyTasks();
 
-  // Render initial UI
   renderWeekHeader();
-  buildGrid();
+  buildWeekGrid();
   renderAllTasks();
-  renderArchiveList();
+  renderTemplates();
+  renderArchives();
 
-  // Bind UI events
   bindUI();
 
-  // Periodic week rollover check (non-blocking)
-  setInterval(checkWeekRollover, 30*1000);
+  // check for week rollover every 30s
+  setInterval(checkWeekRollover, 30_000);
 }
 
-/* Initialize empty tasks object (0..6) */
+/* helper keys */
+function tasksKey(wk){ return `${STORAGE_PREFIX}_tasks_${wk}`; }
+function archiveKey(wk){ return `${STORAGE_PREFIX}_archive_${wk}`; }
+
+/* initialize empty tasks object */
 function initEmptyTasks(){
   app.tasks = {};
   for (let i=0;i<7;i++) app.tasks[i] = [];
-}
-
-/* Save tasks for current visible week */
-function saveTasks(){
   storage.save(tasksKey(app.weekKey), app.tasks);
 }
 
-/* Save settings */
-function saveSettings(){
-  storage.save(SETTINGS_KEY, app.settings);
-}
+/* save settings */
+function saveSettings(){ storage.save(SETTINGS_KEY, app.settings); }
 
-/* =========================
-   Weekly rotation & archive logic
-   ========================= */
-function handleWeeklyResetOnLoad(){
-  // Archive any stored tasks with a different weekKey (if autoReset enabled)
-  const allKeys = Object.keys(localStorage).filter(k => k.startsWith(`${STORAGE_PREFIX}_tasks_`));
-  for (const k of allKeys){
+/* ---------- Weekly reset & archive ---------- */
+function archiveOldWeeksOnLoad(){
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(`${STORAGE_PREFIX}_tasks_`));
+  for (const k of keys){
     const wk = k.replace(`${STORAGE_PREFIX}_tasks_`, '');
     if (wk !== app.weekKey){
       if (app.settings.autoReset){
         const payload = storage.load(k, null);
         if (payload){
-          // archive
           storage.save(archiveKey(wk), { key: wk, tasks: payload, archivedAt: Date.now() });
           if (!app.archives.includes(wk)) app.archives.unshift(wk);
-          // enforce cap
-          if (app.archives.length > MAX_ARCHIVE_ENTRIES) {
-            const removed = app.archives.splice(MAX_ARCHIVE_ENTRIES);
+          if (app.archives.length > MAX_ARCHIVES) {
+            const removed = app.archives.splice(MAX_ARCHIVES);
             removed.forEach(r => storage.remove(archiveKey(r)));
           }
           storage.save(ARCHIVE_INDEX_KEY, app.archives);
@@ -475,51 +481,53 @@ function handleWeeklyResetOnLoad(){
   }
 }
 
-/* Called periodically to detect ISO week change */
+/* On load, archive old weeks */
+archiveOldWeeksOnLoad();
+
+/* check if week rolled over (user left tab open across weeks) */
 function checkWeekRollover(){
   const newKey = getISOWeekKey(new Date());
-  if (newKey !== getISOWeekKey(app.weekDate)){
-    // user navigated away in time — switch to current date
+  if (newKey !== app.weekKey){
     if (app.settings.autoReset){
       // archive current visible week
       storage.save(archiveKey(app.weekKey), { key: app.weekKey, tasks: app.tasks, archivedAt: Date.now() });
       if (!app.archives.includes(app.weekKey)) app.archives.unshift(app.weekKey);
-      if (app.archives.length > MAX_ARCHIVE_ENTRIES){
-        const removed = app.archives.splice(MAX_ARCHIVE_ENTRIES);
-        removed.forEach(r=> storage.remove(archiveKey(r)));
+      if (app.archives.length > MAX_ARCHIVES) {
+        const removed = app.archives.splice(MAX_ARCHIVES);
+        removed.forEach(r => storage.remove(archiveKey(r)));
       }
       storage.save(ARCHIVE_INDEX_KEY, app.archives);
+      // switch to current week and reset
       app.weekDate = new Date();
       app.weekKey = getISOWeekKey(app.weekDate);
       initEmptyTasks();
-      saveTasks();
       renderWeekHeader();
+      buildWeekGrid();
       renderAllTasks();
-      renderArchiveList();
-      toast('Week changed — tasks reset and archived.');
+      renderArchives();
+      toast('New ISO week detected. Archive created and tasks reset.');
     } else {
-      // if not autoReset: load new week if exists, else initialize
+      // load new week if exists
       app.weekDate = new Date();
       app.weekKey = getISOWeekKey(app.weekDate);
       const loaded = storage.load(tasksKey(app.weekKey), null);
       if (loaded) app.tasks = loaded;
-      else { initEmptyTasks(); saveTasks(); }
+      else initEmptyTasks();
       renderWeekHeader();
+      buildWeekGrid();
       renderAllTasks();
     }
   }
 }
 
-/* =========================
-   UI: Week header & grid
-   ========================= */
+/* ---------- Render / UI ---------- */
 function renderWeekHeader(){
-  refs.weekKeyBadge.textContent = app.weekKey;
+  refs.weekBadge.textContent = app.weekKey;
   refs.weekRange.textContent = weekRangeText(app.weekDate);
 }
 
-/* Build the day columns (Mon..Sun) */
-function buildGrid(){
+/* Build week columns */
+function buildWeekGrid(){
   refs.weekGrid.innerHTML = '';
   const mon = startOfISOWeek(app.weekDate);
   for (let i=0;i<7;i++){
@@ -527,62 +535,118 @@ function buildGrid(){
     const col = document.createElement('div');
     col.className = 'day-col';
     col.dataset.day = i;
-    if (isToday(d)) col.classList.add('today');
     col.setAttribute('role','list');
     col.setAttribute('aria-label', `Tasks for ${DAYS[i]}`);
-
     col.innerHTML = `
       <div class="day-header">
         <div>
           <div class="day-name">${DAYS[i]}</div>
           <div class="day-date">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
         </div>
-        <div class="small muted">${d.getFullYear()}</div>
+        <div class="text-muted small">${d.getFullYear()}</div>
       </div>
-      <div class="task-list" style="display:flex;flex-direction:column;gap:8px" aria-live="polite"></div>
+      <div class="task-list" aria-live="polite"></div>
     `;
 
-    // drag events
-    const list = col.querySelector('.task-list');
-    list.addEventListener('dragover', e => {
+    // touch-friendly drop target
+    const taskList = col.querySelector('.task-list');
+    taskList.addEventListener('dragover', e => { e.preventDefault(); taskList.style.outline = '2px dashed rgba(255,255,255,0.03)'; });
+    taskList.addEventListener('dragleave', ()=> taskList.style.outline = 'none');
+    taskList.addEventListener('drop', e => {
       e.preventDefault();
-      list.style.outline = '2px dashed rgba(255,255,255,0.03)';
-    });
-    list.addEventListener('dragleave', () => list.style.outline = 'none');
-    list.addEventListener('drop', e => {
-      e.preventDefault();
-      list.style.outline = 'none';
+      taskList.style.outline = 'none';
       const id = e.dataTransfer.getData('text/task-id');
       if (id) moveTaskToDay(id, Number(col.dataset.day));
+    });
+
+    // tap to show timeline detail in bottom panel
+    col.addEventListener('click', (ev)=> {
+      // avoid opening timeline when clicking a task control
+      if (ev.target.closest('.task')) return;
+      openTimelineForDay(i, d);
     });
 
     refs.weekGrid.appendChild(col);
   }
 }
 
-/* Utility: is date today */
-function isToday(d){
-  const t = new Date();
-  return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+/* Render tasks into day columns */
+function renderAllTasks(){
+  for (let d=0; d<7; d++){
+    const col = refs.weekGrid.querySelector(`.day-col[data-day="${d}"]`);
+    if (!col) continue;
+    const list = col.querySelector('.task-list');
+    list.innerHTML = '';
+    app.tasks[d] = app.tasks[d] || [];
+    if (app.settings.autoSort) sortTasksForDay(d);
+    if (app.tasks[d].length === 0){
+      const hint = document.createElement('div'); hint.className='text-muted small'; hint.textContent='No tasks';
+      list.appendChild(hint);
+    } else {
+      for (const t of app.tasks[d]) list.appendChild(createTaskNode(t));
+    }
+  }
 }
 
-/* =========================
-   Task CRUD
-   ========================= */
-function pushUndo(){ undoStack.push({ weekKey: app.weekKey, tasks: app.tasks }); }
+/* Create DOM node for a task */
+function createTaskNode(task){
+  const node = document.createElement('div');
+  node.className = 'task';
+  node.draggable = true;
+  node.dataset.id = task.id;
+  if (task.complete) node.classList.add('complete');
 
-function addTask({title, notes, day, time}){
-  if (!title || !title.trim()) { toast('Task title required.'); return; }
+  const timeEl = document.createElement('div'); timeEl.className='time'; timeEl.textContent = task.time || '—';
+  const content = document.createElement('div'); content.style.display='flex'; content.style.flexDirection='column'; content.style.gap='4px';
+  const titleEl = document.createElement('div'); titleEl.className='title'; titleEl.textContent = task.title;
+  const metaEl = document.createElement('div'); metaEl.className='meta'; metaEl.textContent = task.notes || '';
+  content.appendChild(titleEl); content.appendChild(metaEl);
+
+  const chips = document.createElement('div'); chips.className='chips';
+  const completeBtn = document.createElement('button'); completeBtn.className='chip'; completeBtn.title='Toggle complete'; completeBtn.textContent = task.complete ? '↺' : '✓';
+  completeBtn.addEventListener('click', (e)=>{ e.stopPropagation(); updateTask(task.id, { complete: !task.complete }); });
+  const editBtn = document.createElement('button'); editBtn.className='chip'; editBtn.title='Edit'; editBtn.textContent='✎';
+  editBtn.addEventListener('click', (e)=>{ e.stopPropagation(); openEditModal(task); });
+  const delBtn = document.createElement('button'); delBtn.className='chip'; delBtn.title='Delete'; delBtn.textContent='🗑';
+  delBtn.addEventListener('click', (e)=>{ e.stopPropagation(); deleteTask(task.id); });
+
+  chips.appendChild(completeBtn); chips.appendChild(editBtn); chips.appendChild(delBtn);
+
+  node.appendChild(timeEl); node.appendChild(content); node.appendChild(chips);
+
+  // drag handlers
+  node.addEventListener('dragstart', (ev)=>{
+    node.classList.add('dragging');
+    ev.dataTransfer.setData('text/task-id', task.id);
+    ev.dataTransfer.effectAllowed = 'move';
+  });
+  node.addEventListener('dragend', ()=> node.classList.remove('dragging'));
+
+  // keyboard accessibility
+  node.tabIndex = 0;
+  node.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter') openEditModal(task);
+    if (e.key === 'Delete') deleteTask(task.id);
+  });
+
+  // title double-tap opens edit
+  node.addEventListener('dblclick', ()=> openEditModal(task));
+
+  // show notes tooltip on long press for touch? fallback: title attribute
+  if (task.notes) node.title = task.notes;
+
+  return node;
+}
+
+/* ---------- CRUD ---------- */
+function pushUndo(){
+  undo.push({ weekKey: app.weekKey, tasks: structuredClone(app.tasks) });
+}
+
+function addTask({ title, notes, day, time }){
+  if (!title || !title.trim()) { toast('Task title required'); return; }
   pushUndo();
-  const t = {
-    id: uid('task'),
-    title: title.trim(),
-    notes: notes ? notes.trim() : '',
-    day: Number(day),
-    time: time || '',
-    complete: false,
-    createdAt: Date.now()
-  };
+  const t = { id: uid('task'), title: title.trim(), notes: notes?notes.trim():'', day: Number(day), time: time || '', complete:false, createdAt: Date.now(), updatedAt: Date.now() };
   app.tasks[t.day].push(t);
   if (app.settings.autoSort) sortTasksForDay(t.day);
   saveTasks();
@@ -593,12 +657,11 @@ function addTask({title, notes, day, time}){
 function updateTask(id, patch){
   pushUndo();
   for (let d=0; d<7; d++){
-    const idx = (app.tasks[d]||[]).findIndex(t => t.id === id);
-    if (idx >= 0){
+    const idx = app.tasks[d].findIndex(x=>x.id===id);
+    if (idx>=0){
       const existing = app.tasks[d][idx];
-      const updated = { ...existing, ...patch };
-      // if day changed, move it
-      if (patch.day !== undefined && patch.day !== d){
+      const updated = {...existing, ...patch, updatedAt: Date.now()};
+      if (patch.day!==undefined && patch.day!==d){
         app.tasks[d].splice(idx,1);
         updated.day = Number(patch.day);
         app.tasks[updated.day].push(updated);
@@ -606,9 +669,8 @@ function updateTask(id, patch){
         app.tasks[d][idx] = updated;
       }
       if (app.settings.autoSort) sortTasksForDay(updated.day);
-      saveTasks();
-      renderAllTasks();
-      toast('Task saved');
+      saveTasks(); renderAllTasks();
+      toast('Task updated');
       return;
     }
   }
@@ -618,48 +680,36 @@ function deleteTask(id){
   if (!confirm('Delete task? This cannot be undone.')) return;
   pushUndo();
   for (let d=0; d<7; d++){
-    const idx = (app.tasks[d]||[]).findIndex(t => t.id === id);
-    if (idx >= 0){
+    const idx = app.tasks[d].findIndex(x=>x.id===id);
+    if (idx>=0){
       app.tasks[d].splice(idx,1);
-      saveTasks();
-      renderAllTasks();
+      saveTasks(); renderAllTasks();
       toast('Task deleted');
       return;
     }
   }
 }
 
-/* Move task to another day (used by DnD) */
+/* Move between days (drag/drop) */
 function moveTaskToDay(id, destDay){
   pushUndo();
   for (let d=0; d<7; d++){
-    const idx = (app.tasks[d]||[]).findIndex(t => t.id === id);
-    if (idx >= 0){
+    const idx = app.tasks[d].findIndex(x=>x.id===id);
+    if (idx>=0){
       const t = app.tasks[d].splice(idx,1)[0];
       t.day = Number(destDay);
       app.tasks[destDay].push(t);
       if (app.settings.autoSort) sortTasksForDay(destDay);
-      saveTasks();
-      renderAllTasks();
+      saveTasks(); renderAllTasks();
       toast('Task moved');
       return;
     }
   }
 }
 
-/* Clear week */
-function clearWeek(){
-  if (!confirm('Clear all tasks for this visible week? This action can be undone via Undo immediately.')) return;
-  pushUndo();
-  initEmptyTasks();
-  saveTasks();
-  renderAllTasks();
-  toast('Week cleared');
-}
-
-/* Sorting */
+/* Sorting tasks for day */
 function sortTasksForDay(day){
-  app.tasks[day].sort((a,b) => {
+  app.tasks[day].sort((a,b)=>{
     if (!a.time && !b.time) return a.createdAt - b.createdAt;
     if (!a.time) return 1;
     if (!b.time) return -1;
@@ -667,313 +717,271 @@ function sortTasksForDay(day){
   });
 }
 
-/* =========================
-   Rendering tasks
-   ========================= */
-function renderAllTasks(){
-  for (let d=0; d<7; d++){
-    const col = refs.weekGrid.querySelector(`.day-col[data-day="${d}"]`);
-    if (!col) continue;
-    const list = col.querySelector('.task-list');
-    list.innerHTML = '';
-    app.tasks[d] = app.tasks[d] || [];
-    if (app.settings.autoSort) sortTasksForDay(d);
-    if (app.tasks[d].length === 0){
-      const hint = document.createElement('div');
-      hint.className = 'small muted';
-      hint.textContent = 'No tasks';
-      list.appendChild(hint);
+/* Clear visible week */
+function clearWeek(){
+  if (!confirm('Clear all tasks for this visible week?')) return;
+  pushUndo();
+  for (let i=0;i<7;i++) app.tasks[i]=[];
+  saveTasks(); renderAllTasks(); toast('Week cleared');
+}
+
+/* Save tasks */
+function saveTasks(){
+  storage.save(tasksKey(app.weekKey), app.tasks);
+}
+
+/* ---------- Templates ---------- */
+function parseTemplateText(body){
+  const lines = body.split('\n').map(l=>l.trim()).filter(Boolean);
+  const items = [];
+  for (const ln of lines){
+    // expect "HH:MM — Title" or "HH:MM - Title"
+    const m = ln.match(/^(\d{1,2}:\d{2})\s*[—-]\s*(.+)$/);
+    if (m){
+      items.push({ time: m[1], title: m[2].trim(), notes: '' });
     } else {
-      for (const t of app.tasks[d]){
-        list.appendChild(createTaskNode(t));
-      }
+      // fallback: line as title with no time
+      items.push({ time:'', title: ln, notes:'' });
     }
   }
+  return items;
+}
+function saveTemplate(){
+  const name = refs.templateName.value.trim();
+  const body = refs.templateBody.value.trim();
+  if (!name || !body){ toast('Template name + body required'); return; }
+  const items = parseTemplateText(body);
+  app.templates[name] = items;
+  storage.save(`${STORAGE_PREFIX}_templates`, app.templates);
+  refs.templateName.value=''; refs.templateBody.value='';
+  renderTemplates();
+  toast('Template saved');
+}
+function renderTemplates(){
+  const keys = Object.keys(app.templates);
+  if (!keys.length){ refs.templatesList.textContent = 'No templates yet.'; return; }
+  refs.templatesList.innerHTML = '';
+  for (const k of keys){
+    const el = document.createElement('div'); el.style.display='flex'; el.style.justifyContent='space-between'; el.style.alignItems='center'; el.style.marginBottom='6px';
+    el.innerHTML = `<div><strong>${k}</strong><div class="small text-muted">${app.templates[k].length} tasks</div></div>`;
+    const actions = document.createElement('div');
+    const apply = document.createElement('button'); apply.className='btn ghost'; apply.textContent='Apply'; apply.addEventListener('click', ()=> applyTemplateToDay(k));
+    const del = document.createElement('button'); del.className='btn ghost'; del.textContent='Delete'; del.addEventListener('click', ()=> { if (confirm('Delete template?')) { delete app.templates[k]; storage.save(`${STORAGE_PREFIX}_templates`, app.templates); renderTemplates(); } });
+    actions.appendChild(apply); actions.appendChild(del);
+    el.appendChild(actions);
+    refs.templatesList.appendChild(el);
+  }
+}
+function applyTemplateToDay(templateName){
+  const day = Number(refs.taskDay.value);
+  if (!app.templates[templateName]) return;
+  pushUndo();
+  for (const item of app.templates[templateName]){
+    const t = { id: uid('task'), title:item.title, notes:item.notes||'', day, time:item.time||'', complete:false, createdAt:Date.now(), updatedAt:Date.now() };
+    app.tasks[day].push(t);
+  }
+  if (app.settings.autoSort) sortTasksForDay(day);
+  saveTasks(); renderAllTasks();
+  toast(`Template "${templateName}" applied to ${DAYS[day]}`);
 }
 
-/* Create DOM node for task */
-function createTaskNode(t){
-  const node = document.createElement('div');
-  node.className = 'task';
-  node.draggable = true;
-  node.dataset.id = t.id;
-  if (t.complete) node.classList.add('complete');
-
-  const time = document.createElement('div'); time.className='time'; time.textContent = t.time || '—';
-  const title = document.createElement('div'); title.className='title'; title.textContent = t.title;
-  const meta = document.createElement('div'); meta.className='meta'; meta.textContent = t.notes ? (t.notes.length>60 ? t.notes.slice(0,57)+'...' : t.notes) : '';
-  const actions = document.createElement('div'); actions.className='chips';
-
-  const completeBtn = document.createElement('button'); completeBtn.className='chip'; completeBtn.title='Toggle complete'; completeBtn.textContent = t.complete ? '↺' : '✓';
-  completeBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    updateTask(t.id, { complete: !t.complete });
-  });
-
-  const editBtn = document.createElement('button'); editBtn.className='chip'; editBtn.title='Edit'; editBtn.textContent = '✎';
-  editBtn.addEventListener('click', e => { e.stopPropagation(); openEditModal(t); });
-
-  const delBtn = document.createElement('button'); delBtn.className='chip'; delBtn.title='Delete'; delBtn.textContent = '🗑';
-  delBtn.addEventListener('click', e => { e.stopPropagation(); deleteTask(t.id); });
-
-  actions.appendChild(completeBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
-
-  const left = document.createElement('div'); left.style.display='flex'; left.style.flexDirection='column'; left.style.gap='6px';
-  left.appendChild(title); left.appendChild(meta);
-
-  node.appendChild(time); node.appendChild(left); node.appendChild(actions);
-
-  // drag behavior
-  node.addEventListener('dragstart', ev => {
-    node.classList.add('dragging');
-    ev.dataTransfer.setData('text/task-id', t.id);
-    ev.dataTransfer.effectAllowed = 'move';
-  });
-  node.addEventListener('dragend', () => node.classList.remove('dragging'));
-
-  // keyboard focus: Enter open edit, Delete prompt delete
-  node.tabIndex = 0;
-  node.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') openEditModal(t);
-    if (ev.key === 'Delete') deleteTask(t.id);
-  });
-
-  // double click quick edit
-  node.addEventListener('dblclick', () => openEditModal(t));
-
-  // tooltip for notes
-  if (t.notes) node.title = t.notes;
-
-  return node;
+/* ---------- Timeline (day detail) ---------- */
+function openTimelineForDay(dayIndex, dateObj){
+  // build grid rows and make time-slot droppable
+  refs.timelinePanel.style.display = 'block';
+  refs.timelinePanel.setAttribute('aria-hidden','false');
+  refs.timelineDayLabel.textContent = `${DAYS[dayIndex]}`;
+  refs.timelineDate.textContent = dateObj ? dateObj.toLocaleDateString() : '';
+  refs.timeGrid.innerHTML = '';
+  for (let h = START_HOUR; h <= END_HOUR; h++){
+    const label = `${String(h).padStart(2,'0')}:00`;
+    const row = document.createElement('div'); row.className='time-row';
+    row.innerHTML = `<div class="time-label">${label}</div><div class="time-slot" data-hour="${label}" data-day="${dayIndex}"></div>`;
+    const slot = row.querySelector('.time-slot');
+    // attach drop handlers
+    slot.addEventListener('dragover', e => { e.preventDefault(); slot.style.outline='2px dashed rgba(255,255,255,0.03)'; });
+    slot.addEventListener('dragleave', ()=> slot.style.outline='none');
+    slot.addEventListener('drop', e => {
+      e.preventDefault(); slot.style.outline='none';
+      const id = e.dataTransfer.getData('text/task-id');
+      if (id){
+        updateTask(id, { day: Number(dayIndex), time: label });
+      }
+    });
+    // fill with tasks for that hour
+    const tasksForDay = (app.tasks[dayIndex] || []).filter(t => t.time && t.time.startsWith(label.slice(0,2)));
+    for (const t of tasksForDay){
+      const tn = createTaskNode(t);
+      tn.style.margin = '6px 0';
+      slot.appendChild(tn);
+    }
+    refs.timeGrid.appendChild(row);
+  }
+  // scroll timeline to top when opened
+  refs.timeGrid.scrollTop = 0;
 }
 
-/* =========================
-   Modal (edit) functionality
-   ========================= */
-let activeEditTaskId = null;
+/* close timeline (simple hide) */
+function closeTimeline(){
+  refs.timelinePanel.style.display = 'none';
+  refs.timelinePanel.setAttribute('aria-hidden','true');
+}
 
+/* ---------- Edit modal ---------- */
+let editingTaskId = null;
 function openEditModal(task){
-  activeEditTaskId = task.id;
+  editingTaskId = task.id;
   refs.editTitle.value = task.title;
   refs.editDay.value = String(task.day);
   refs.editTime.value = task.time || '';
   refs.editNotes.value = task.notes || '';
   showModal(true);
-  refs.editTitle.focus();
 }
-
 function showModal(show=true){
-  refs.modalBackdrop.classList.toggle('show', show);
-  refs.modalBackdrop.setAttribute('aria-hidden', String(!show));
+  const modal = document.getElementById('modal');
+  modal.classList.toggle('show', show);
+  modal.style.display = show ? 'flex' : 'none';
+  modal.setAttribute('aria-hidden', String(!show));
+  if (show) refs.editTitle.focus();
 }
-
-function closeModal(){
-  activeEditTaskId = null;
+function saveModal(){
+  if (!editingTaskId) return;
+  const payload = { title: refs.editTitle.value.trim() || 'Untitled', notes: refs.editNotes.value.trim(), time: refs.editTime.value || '', day: Number(refs.editDay.value) };
+  updateTask(editingTaskId, payload);
+  editingTaskId = null;
+  showModal(false);
+}
+function deleteFromModal(){
+  if (!editingTaskId) return;
+  if (!confirm('Delete this task?')) return;
+  deleteTask(editingTaskId);
+  editingTaskId = null;
   showModal(false);
 }
 
-/* Save modal changes */
-function saveModal(){
-  if (!activeEditTaskId) return;
-  const payload = {
-    title: refs.editTitle.value.trim() || 'Untitled',
-    notes: refs.editNotes.value.trim(),
-    time: refs.editTime.value || '',
-    day: Number(refs.editDay.value)
-  };
-  updateTask(activeEditTaskId, payload);
-  closeModal();
-}
-
-/* Delete from modal */
-function deleteFromModal(){
-  if (!activeEditTaskId) return;
-  if (!confirm('Delete task? This cannot be undone.')) return;
-  deleteTask(activeEditTaskId);
-  closeModal();
-}
-
-/* =========================
-   Import / Export / Archives
-   ========================= */
-function exportCurrentWeek(){
+/* ---------- Import/Export (simple) ---------- */
+function exportWeek(){
   const payload = { weekKey: app.weekKey, tasks: app.tasks, exportedAt: Date.now() };
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
-  const a = document.createElement('a'); a.href = dataStr; a.download = `mcif_tasks_${app.weekKey}.json`; document.body.appendChild(a); a.click(); a.remove();
-  toast('Exported current week JSON');
+  const href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+  const a = document.createElement('a'); a.href = href; a.download = `mcif_tasks_${app.weekKey}.json`; document.body.appendChild(a); a.click(); a.remove();
+  toast('Week exported');
+}
+function importJSONFile(file){
+  const reader = new FileReader();
+  reader.onload = function(){ try{ const obj = JSON.parse(reader.result); if (!obj.weekKey || !obj.tasks) throw new Error('Invalid file'); if (obj.weekKey !== app.weekKey && !confirm(`Import is for ${obj.weekKey}. Replace visible week ${app.weekKey}?`)) return; pushUndo(); app.tasks = obj.tasks; saveTasks(); renderAllTasks(); toast('Import complete'); } catch(e){ toast('Import failed: ' + e.message); } };
+  reader.readAsText(file);
 }
 
-function importJSON(){
-  const input = document.createElement('input'); input.type='file'; input.accept='application/json';
-  input.addEventListener('change', async e => {
-    const file = e.target.files[0]; if (!file) return;
-    const text = await file.text();
-    try {
-      const obj = JSON.parse(text);
-      if (!obj.weekKey || !obj.tasks) throw new Error('Invalid file');
-      if (obj.weekKey !== app.weekKey){
-        if (!confirm(`Import is for ${obj.weekKey}. Replace visible week ${app.weekKey}?`)) return;
-      }
-      pushUndo();
-      app.tasks = obj.tasks;
-      saveTasks();
-      renderAllTasks();
-      toast('Import complete');
-    } catch(err){ toast('Import failed: ' + err.message); }
-  });
-  input.click();
-}
-
-/* Archive management UI */
-function renderArchiveList(){
-  refs.archiveList.innerHTML = '';
-  if (!app.archives || app.archives.length === 0){
-    refs.archiveList.textContent = 'No archives yet — old weeks auto-archived here.';
-    return;
-  }
-  for (const k of app.archives.slice(0, MAX_ARCHIVE_ENTRIES)){
+/* ---------- Archives UI ---------- */
+function renderArchives(){
+  refs.archivesDiv.innerHTML = '';
+  if (!app.archives.length){ refs.archivesDiv.textContent = 'No archives yet.'; return; }
+  for (const k of app.archives.slice(0, MAX_ARCHIVES)){
     const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; row.style.marginBottom='8px';
-    const left = document.createElement('div'); left.innerHTML = `<strong>${k}</strong><div class="small muted">Archived</div>`;
+    const left = document.createElement('div'); left.innerHTML = `<strong>${k}</strong><div class="small text-muted">Archived</div>`;
     const actions = document.createElement('div');
-    const openBtn = document.createElement('button'); openBtn.className='btn ghost'; openBtn.textContent='Open';
-    openBtn.addEventListener('click', ()=> openArchive(k));
-    const dlBtn = document.createElement('button'); dlBtn.className='btn ghost'; dlBtn.textContent='Download';
-    dlBtn.addEventListener('click', ()=> downloadArchive(k));
+    const openBtn = document.createElement('button'); openBtn.className='btn ghost'; openBtn.textContent='Open'; openBtn.addEventListener('click', ()=> openArchive(k));
+    const dlBtn = document.createElement('button'); dlBtn.className='btn ghost'; dlBtn.textContent='Download'; dlBtn.addEventListener('click', ()=> downloadArchive(k));
     actions.appendChild(openBtn); actions.appendChild(dlBtn);
     row.appendChild(left); row.appendChild(actions);
-    refs.archiveList.appendChild(row);
+    refs.archivesDiv.appendChild(row);
   }
 }
-
 function openArchive(k){
   const payload = storage.load(archiveKey(k), null);
-  if (!payload){ toast('Archive missing'); return; }
+  if (!payload) { toast('Archive missing'); return; }
   const count = Object.values(payload.tasks).reduce((s,arr)=> s + (arr?.length||0), 0);
   alert(`Archive ${k}\nTasks: ${count}\nArchived at: ${new Date(payload.archivedAt).toLocaleString()}`);
 }
-
 function downloadArchive(k){
   const payload = storage.load(archiveKey(k), null);
-  if (!payload){ toast('Archive missing'); return; }
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
-  const a = document.createElement('a'); a.href = dataStr; a.download = `mcif_archive_${k}.json`; document.body.appendChild(a); a.click(); a.remove();
+  if (!payload) { toast('Archive missing'); return; }
+  const href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+  const a = document.createElement('a'); a.href = href; a.download = `mcif_archive_${k}.json`; document.body.appendChild(a); a.click(); a.remove();
 }
 
-/* =========================
-   Navigation: prev/next week and today
-   ========================= */
-function gotoWeek(offsetWeeks = 0){
-  if (offsetWeeks !== 0){
-    const newDate = new Date(app.weekDate);
-    newDate.setDate(newDate.getDate() + offsetWeeks * 7);
-    app.weekDate = newDate;
-  } else {
-    app.weekDate = new Date();
-  }
-  app.weekKey = getISOWeekKey(app.weekDate);
-  // load tasks for new visible week (create empty if none)
-  const loaded = storage.load(tasksKey(app.weekKey), null);
-  if (loaded) app.tasks = loaded;
-  else { initEmptyTasks(); saveTasks(); }
-  renderWeekHeader();
-  buildGrid();
-  renderAllTasks();
-}
-
-/* =========================
-   Undo
-   ========================= */
-function undo(){
-  const snapshot = undoStack.pop();
-  if (!snapshot){ toast('Nothing to undo'); return; }
-  if (snapshot.weekKey !== app.weekKey){
-    // If snapshot was for another week, replace visible week to that snapshot's week
-    app.weekKey = snapshot.weekKey;
-    app.weekDate = new Date();
-    // We attempt to set weekDate to the snapshot week by parsing iso week -> approximate date
-    // For simplicity set to today (UI will show correct weekKey)
-  }
-  app.tasks = snapshot.tasks;
-  saveTasks();
-  renderAllTasks();
-  toast('Undone');
-}
-
-/* =========================
-   UI bindings
-   ========================= */
+/* ---------- Keyboard & UI binding ---------- */
 function bindUI(){
-  refs.addTaskBtn.addEventListener('click', ()=> {
-    addTask({
-      title: refs.taskTitle.value,
-      notes: refs.taskNotes.value,
-      day: refs.taskDay.value,
-      time: refs.taskTime.value
-    });
+  refs.addBtn.addEventListener('click', ()=> {
+    addTask({ title: refs.taskTitle.value, notes: refs.taskNotes.value, day: refs.taskDay.value, time: refs.taskTime.value });
     refs.taskTitle.value=''; refs.taskNotes.value=''; refs.taskTime.value='';
-    refs.taskTitle.focus();
   });
-
-  refs.clearWeekBtn.addEventListener('click', clearWeek);
-  refs.exportBtn.addEventListener('click', exportCurrentWeek);
-  refs.importBtn.addEventListener('click', importJSON);
-  refs.prevWeek.addEventListener('click', ()=>{ gotoWeek(-1); });
-  refs.nextWeek.addEventListener('click', ()=>{ gotoWeek(1); });
-  refs.todayBtn.addEventListener('click', ()=>{ gotoWeek(0); });
+  refs.clearBtn.addEventListener('click', clearWeek);
+  refs.prevWeek.addEventListener('click', ()=> gotoWeek(-1));
+  refs.nextWeek.addEventListener('click', ()=> gotoWeek(1));
+  refs.todayBtn.addEventListener('click', ()=> gotoWeek(0));
+  refs.notifyPermBtn.addEventListener('click', async ()=> { const ok = await requestNotificationPermission(); toast(ok ? 'Notifications enabled' : 'Notifications blocked'); });
   refs.autoReset.addEventListener('change', e => { app.settings.autoReset = e.target.checked; saveSettings(); toast('Auto-reset updated'); });
-  refs.autoSort.addEventListener('change', e => { app.settings.autoSort = e.target.checked; saveSettings(); renderAllTasks(); toast('Auto-sort updated'); });
+  refs.autoSort.addEventListener('change', e => { app.settings.autoSort = e.target.checked; saveSettings(); toast('Auto-sort updated'); });
 
-  // modal buttons
-  refs.saveBtn.addEventListener('click', saveModal);
-  refs.closeModal.addEventListener('click', closeModal);
-  refs.deleteBtn.addEventListener('click', deleteFromModal);
-
-  // keyboard shortcuts: Ctrl/Cmd+Enter add, Ctrl+Z undo
-  document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
-      if (document.activeElement === refs.taskTitle || document.activeElement === refs.taskNotes) refs.addTaskBtn.click();
-      else addTask({ title: refs.taskTitle.value, notes: refs.taskNotes.value, day: refs.taskDay.value, time: refs.taskTime.value });
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ undo(); }
+  refs.saveTemplateBtn.addEventListener('click', saveTemplate);
+  refs.applyTemplateBtn.addEventListener('click', ()=> {
+    // apply typed template to selected input day
+    const name = refs.templateName.value.trim();
+    if (!name){ toast('Enter template name to apply'); return; }
+    if (!app.templates[name]){ toast('Template not found'); return; }
+    applyTemplateToDay(name);
   });
 
-  // undo button
-  refs.undoBtn.addEventListener('click', undo);
+  refs.saveTaskBtn.addEventListener('click', saveModal);
+  refs.closeModalBtn.addEventListener('click', ()=> { editingTaskId = null; showModal(false); });
+  refs.deleteTaskBtn.addEventListener('click', ()=> deleteFromModal());
 
-  // modal ESC to close
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (e)=> {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') refs.addBtn.click();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z'){ const snap = undo.pop(); if (snap){ app.weekKey = snap.weekKey; app.tasks = snap.tasks; saveTasks(); renderAllTasks(); toast('Undone'); } else toast('Nothing to undo'); }
+    if (e.key === 'Escape') { showModal(false); closeTimeline(); }
+  });
 
-  // quick import when user drags a JSON file onto the app
-  window.addEventListener('drop', async (ev) => {
+  // drag-and-drop import JSON file
+  window.addEventListener('drop', (ev)=> {
     ev.preventDefault();
     if (!ev.dataTransfer.files?.length) return;
     const f = ev.dataTransfer.files[0];
-    if (f.type === 'application/json' || /\.json$/i.test(f.name)){
-      const text = await f.text();
-      try{
-        const obj = JSON.parse(text);
-        if (!obj.weekKey || !obj.tasks) throw new Error('Invalid file');
-        if (!confirm(`Import file for ${obj.weekKey}? Replaces current visible week.`)) return;
-        pushUndo();
-        app.tasks = obj.tasks;
-        saveTasks();
-        renderAllTasks();
-        toast('Import successful');
-      } catch(err){ toast('Import failed: ' + err.message); }
-    }
+    if (f.type === 'application/json' || /\.json$/i.test(f.name)) importJSONFile(f);
   });
-  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('dragover', (ev)=> ev.preventDefault());
 }
 
-/* =========================
-   Startup
-   ========================= */
-init();
+/* ---------- Navigation: weeks ---------- */
+function gotoWeek(offset){
+  if (offset === 0){
+    app.weekDate = new Date();
+  } else {
+    const d = new Date(app.weekDate);
+    d.setDate(d.getDate() + (offset * 7));
+    app.weekDate = d;
+  }
+  app.weekKey = getISOWeekKey(app.weekDate);
+  const loaded = storage.load(tasksKey(app.weekKey), null);
+  if (loaded) app.tasks = loaded; else initEmptyTasks();
+  renderWeekHeader();
+  buildWeekGrid();
+  renderAllTasks();
+}
 
-/* Expose for power users */
+/* ---------- Helpers ---------- */
+function tasksKey(wk){ return `${STORAGE_PREFIX}_tasks_${wk}`; }
+function archiveKey(wk){ return `${STORAGE_PREFIX}_archive_${wk}`; }
+
+/* ---------- Startup ---------- */
+init();
+bindUI();
+
+/* ---------- Expose some helpers in console for power users ---------- */
 window.mcifScheduler = {
-  app, addTask, updateTask, deleteTask, exportCurrentWeek, importJSON, undo
+  app,
+  addTask,
+  updateTask,
+  deleteTask,
+  exportWeek,
+  importJSONFile,
+  openTimelineForDay,
+  gotoWeek,
+  sendNotification
 };
+
+/* End of script */
 </script>
 </body>
 </html>
