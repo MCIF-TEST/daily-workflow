@@ -1,674 +1,1295 @@
 /**
- * TheHaydenSphere — Backend v3 (Enterprise Single-File)
+ * app.js
+ * MCIF Compact Scheduler — Full Feature Implementation (Verbatim plan)
+ * - Single-file JS that builds UI (if needed), persists everything locally,
+ *   and implements all features described in the plan.
  *
- * Run:
- *   npm i express cors bcrypt jsonwebtoken multer uuid
- *   node server.js
+ * Author: Your MCIF Dev (generated)
+ * Date: 2025-12-05
  *
- * Core features:
- *  - Composite file storage under ./data/
- *  - bcrypt PIN storage & management
- *  - JWT auth (access + refresh)
- *  - Notes metadata + versioned encrypted blobs (gzip + AES-GCM)
- *  - Encryption profiles: client-only, server-assisted, hybrid
- *  - File uploads (encrypted)
- *  - Tasks (Day A/B) CRUD + reorder
- *  - Courses, Watchlist, Topics CRUD
- *  - Sessions (pomodoro/focus) logging (no XP)
- *  - SSE events for realtime sync
- *  - Search across metadata
- *  - Export/import/backups
- *  - History log for audit
+ * How to use:
+ * 1. Include <div id="app"></div> in your HTML (optional — script will create it).
+ * 2. Include this script at the end of the body or with defer.
  *
- * No gamification/XP features included.
+ * This file expects no backend. All data is stored in localStorage.
  */
 
-const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const zlib = require('zlib');
+/* =========================
+   Utilities & Constants
+   ========================= */
 
-const PORT = process.env.PORT || 3000;
-const DATA_DIR = path.join(__dirname, 'data');
-const BLOBS_DIR = path.join(DATA_DIR, 'blobs'); // each note id -> folder
-const FILES_DIR = path.join(DATA_DIR, 'files'); // attachment storage
-const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-const META_FILE = path.join(DATA_DIR, 'meta.json');
-const NOTES_INDEX = path.join(DATA_DIR, 'notesIndex.json');
-const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
-const COURSES_FILE = path.join(DATA_DIR, 'courses.json');
-const WATCH_FILE = path.join(DATA_DIR, 'watch.json');
-const TOPICS_FILE = path.join(DATA_DIR, 'topics.json');
-const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
-const HISTORY_LOG = path.join(DATA_DIR, 'history.log');
+const MCIF = (function () {
+  // Basic constants
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const START_HOUR = 6;
+  const END_HOUR = 22;
+  const MS = 1000;
+  const STORAGE_PREFIX = 'mcif_compact_v2';
+  const SETTINGS_KEY = `${STORAGE_PREFIX}_settings`;
+  const TASKS_KEY = `${STORAGE_PREFIX}_tasks`;
+  const TEMPLATES_KEY = `${STORAGE_PREFIX}_templates`;
+  const ARCHIVES_KEY = `${STORAGE_PREFIX}_archives`;
+  const SESSIONS_KEY = `${STORAGE_PREFIX}_sessions`;
+  const UNDO_LIMIT = 40;
+  const MAX_ARCHIVE_ENTRIES = 128;
 
-const JWT_SECRET = process.env.THEHAYDEN_JWT_SECRET || crypto.randomBytes(32).toString('hex');
-const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || '1h';
-const REFRESH_TOKEN_TTL = process.env.REFRESH_TOKEN_TTL || '7d';
-const BCRYPT_ROUNDS = 12;
+  // Helpers
+  const uid = (p = 'id') => `${p}_${Math.random().toString(36).slice(2,10)}`;
+  const now = () => Date.now();
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// ensure directories exist
-[DATA_DIR, BLOBS_DIR, FILES_DIR, BACKUP_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-
-// init files if missing
-function writeIfMissing(filePath, defaultValue) {
-  if (!fs.existsSync(filePath)) fs.writeFileSync(filePath, JSON.stringify(defaultValue, null, 2));
-}
-writeIfMissing(META_FILE, { createdAt: Date.now(), version: 'thehaydensphere.v3', pinHash: null, encryptionProfile: 'client-only' });
-writeIfMissing(NOTES_INDEX, []);
-writeIfMissing(TASKS_FILE, { A: [], B: [] });
-writeIfMissing(COURSES_FILE, []);
-writeIfMissing(WATCH_FILE, []);
-writeIfMissing(TOPICS_FILE, []);
-writeIfMissing(SESSIONS_FILE, []);
-
-// simple in-memory SSE clients
-const sseClients = [];
-
-// helper: read/write JSON convenience
-function readJson(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return null; } }
-function writeJson(p, v) { fs.writeFileSync(p, JSON.stringify(v, null, 2), 'utf8'); }
-
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '12mb' }));
-
-// multer setup for file uploads (store temp, we'll encrypt and move)
-const upload = multer({ dest: path.join(__dirname, 'tmp_uploads'), limits: { fileSize: 50 * 1024 * 1024 } });
-
-// ---------- Utilities ----------
-function logHistory(action, payload) {
-  const entry = { ts: Date.now(), action, payload };
-  fs.appendFileSync(HISTORY_LOG, JSON.stringify(entry) + '\n');
-  // SSE push
-  const data = `data: ${JSON.stringify(entry)}\n\n`;
-  sseClients.forEach(res => res.write(data));
-}
-function id(prefix = '') { return prefix + uuidv4(); }
-function now() { return Date.now(); }
-function sha256Hex(input) { return crypto.createHash('sha256').update(input).digest('hex'); }
-
-// AES-GCM helpers
-async function deriveKeyFromPin(pin) {
-  // PBKDF2 -> 32 bytes
-  const salt = Buffer.from('TheHaydenSphereSaltV3');
-  return new Promise((resolve, reject) => {
-    crypto.pbkdf2(pin, salt, 200000, 32, 'sha256', (err, key) => {
-      if (err) return reject(err);
-      resolve(key);
-    });
-  });
-}
-function aesGcmEncrypt(keyBuf, plaintextBuffer) {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', keyBuf, iv);
-  const enc = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return { ciphertext: Buffer.concat([enc, tag]).toString('base64'), iv: iv.toString('base64') };
-}
-function aesGcmDecrypt(keyBuf, ciphertextBase64, ivBase64) {
-  const buffer = Buffer.from(ciphertextBase64, 'base64');
-  const iv = Buffer.from(ivBase64, 'base64');
-  const tag = buffer.slice(buffer.length - 16);
-  const ciphertext = buffer.slice(0, buffer.length - 16);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuf, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  return plain;
-}
-
-// gzip helpers
-function gzipBufferSync(buf) { return zlib.gzipSync(buf); }
-function gunzipBufferSync(buf) { return zlib.gunzipSync(buf); }
-
-// backup creation
-function createBackup() {
-  const backup = {
-    meta: readJson(META_FILE),
-    notesIndex: readJson(NOTES_INDEX),
-    tasks: readJson(TASKS_FILE),
-    courses: readJson(COURSES_FILE),
-    watch: readJson(WATCH_FILE),
-    topics: readJson(TOPICS_FILE),
-    sessions: readJson(SESSIONS_FILE),
-    createdAt: Date.now()
-  };
-  const filename = path.join(BACKUP_DIR, `backup_${Date.now()}.json`);
-  fs.writeFileSync(filename, JSON.stringify(backup, null, 2));
-  logHistory('backup.created', { file: path.basename(filename) });
-  // rotate: keep last 30
-  const backups = fs.readdirSync(BACKUP_DIR).filter(f => f.startsWith('backup_')).sort();
-  if (backups.length > 30) {
-    const toRemove = backups.slice(0, backups.length - 30);
-    toRemove.forEach(f => fs.unlinkSync(path.join(BACKUP_DIR, f)));
+  function ymd(d = new Date()){
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
   }
-}
-
-// schedule nightly backups (every 24h)
-setInterval(() => {
-  try { createBackup(); } catch (e) { console.error('Backup failed', e); }
-}, 24 * 60 * 60 * 1000);
-
-// ---------- Auth: PIN setup & JWT ----------
-const meta = readJson(META_FILE);
-
-app.post('/api/v3/auth/setup-pin', async (req, res) => {
-  /**
-   * body: { pin } - called once to set PIN if not set. If pin exists, requires { currentPin, pin } and will validate currentPin.
-   */
-  const { pin, currentPin } = req.body || {};
-  if (!pin || pin.length < 6) return res.status(400).json({ error: 'pin required (min 6 chars recommended)' });
-  const meta = readJson(META_FILE);
-  if (!meta.pinHash) {
-    const hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
-    meta.pinHash = hash;
-    writeJson(META_FILE, meta);
-    logHistory('auth.setupPin', { createdAt: Date.now() });
-    return res.json({ ok: true, message: 'PIN created' });
-  } else {
-    // change PIN
-    if (!currentPin) return res.status(400).json({ error: 'currentPin required to change pin' });
-    const ok = await bcrypt.compare(currentPin, meta.pinHash);
-    if (!ok) return res.status(403).json({ error: 'invalid currentPin' });
-    const hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
-    meta.pinHash = hash; writeJson(META_FILE, meta); logHistory('auth.changePin', { ts: Date.now() });
-    return res.json({ ok: true, message: 'PIN changed' });
-  }
-});
-
-// login -> issue access + refresh tokens
-app.post('/api/v3/auth/login', async (req, res) => {
-  const { pin } = req.body || {};
-  const meta = readJson(META_FILE);
-  if (!meta.pinHash) return res.status(400).json({ error: 'PIN not set; call setup-pin first' });
-  if (!pin) return res.status(400).json({ error: 'pin required' });
-  const match = await bcrypt.compare(pin, meta.pinHash);
-  if (!match) return res.status(403).json({ error: 'invalid pin' });
-  const accessToken = jwt.sign({ sub: 'default' }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
-  const refreshToken = jwt.sign({ sub: 'default', type: 'refresh' }, JWT_SECRET, { expiresIn: REFRESH_TOKEN_TTL });
-  logHistory('auth.login', { ts: Date.now() });
-  return res.json({ accessToken, refreshToken, expiresIn: ACCESS_TOKEN_TTL });
-});
-
-app.post('/api/v3/auth/refresh', (req, res) => {
-  const { refreshToken } = req.body || {};
-  if (!refreshToken) return res.status(400).json({ error: 'refreshToken required' });
-  try {
-    const payload = jwt.verify(refreshToken, JWT_SECRET);
-    if (payload.type !== 'refresh') return res.status(400).json({ error: 'invalid token' });
-    const accessToken = jwt.sign({ sub: payload.sub }, JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL });
-    return res.json({ accessToken, expiresIn: ACCESS_TOKEN_TTL });
-  } catch (e) {
-    return res.status(403).json({ error: 'invalid refresh token' });
-  }
-});
-
-// auth middleware
-function requireAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ error: 'no auth' });
-  const parts = auth.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') return res.status(400).json({ error: 'bad auth header' });
-  const token = parts[1];
-  try {
-    const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload.sub || 'default';
-    next();
-  } catch (e) {
-    return res.status(401).json({ error: 'invalid token' });
-  }
-}
-
-// SSE endpoint for real-time updates
-app.get('/api/v3/events', requireAuth, (req, res) => {
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive'
-  });
-  res.write('\n');
-  sseClients.push(res);
-  req.on('close', () => {
-    const idx = sseClients.indexOf(res);
-    if (idx >= 0) sseClients.splice(idx, 1);
-  });
-});
-
-// ---------- Tasks (Day A/B) ----------
-function loadTasks() { return readJson(TASKS_FILE) || { A: [], B: [] }; }
-function saveTasks(obj) { writeJson(TASKS_FILE, obj); logHistory('tasks.update', { counts: { A: obj.A.length, B: obj.B.length } }); }
-
-app.get('/api/v3/tasks', requireAuth, (req, res) => {
-  const day = req.query.day === 'B' ? 'B' : 'A';
-  const tasks = loadTasks();
-  return res.json({ day, tasks: tasks[day] || [] });
-});
-
-app.post('/api/v3/tasks', requireAuth, (req, res) => {
-  const { day = 'A', name, minutes = 30, tags = [] } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'name required' });
-  const tasks = loadTasks();
-  const t = { id: id('t'), name, minutes, done: false, notesId: null, courseId: null, tags, createdAt: now() };
-  tasks[day] = tasks[day] || [];
-  tasks[day].push(t);
-  saveTasks(tasks);
-  logHistory('tasks.create', { taskId: t.id, day });
-  return res.json({ ok: true, task: t });
-});
-
-app.patch('/api/v3/tasks/:id', requireAuth, (req, res) => {
-  const tid = req.params.id;
-  const patch = req.body || {};
-  const tasks = loadTasks();
-  let found = null;
-  ['A', 'B'].forEach(d => {
-    const idx = (tasks[d] || []).findIndex(x => x.id === tid);
-    if (idx >= 0) { Object.assign(tasks[d][idx], patch, { updatedAt: now() }); found = tasks[d][idx]; }
-  });
-  if (!found) return res.status(404).json({ error: 'task not found' });
-  saveTasks(tasks);
-  logHistory('tasks.update', { taskId: tid, patch });
-  return res.json({ ok: true, task: found });
-});
-
-app.delete('/api/v3/tasks/:id', requireAuth, (req, res) => {
-  const tid = req.params.id;
-  const tasks = loadTasks();
-  ['A', 'B'].forEach(d => {
-    const idx = (tasks[d] || []).findIndex(x => x.id === tid);
-    if (idx >= 0) tasks[d].splice(idx, 1);
-  });
-  saveTasks(tasks);
-  logHistory('tasks.delete', { taskId: tid });
-  return res.json({ ok: true });
-});
-
-// reorder
-app.post('/api/v3/tasks/reorder', requireAuth, (req, res) => {
-  const { day = 'A', order } = req.body || {};
-  if (!Array.isArray(order)) return res.status(400).json({ error: 'order array required' });
-  const tasks = loadTasks();
-  const map = {};
-  (tasks[day] || []).forEach(t => map[t.id] = t);
-  tasks[day] = order.map(i => map[i]).filter(Boolean);
-  saveTasks(tasks);
-  logHistory('tasks.reorder', { day, order });
-  return res.json({ ok: true, tasks: tasks[day] });
-});
-
-// ---------- Courses ----------
-function loadCourses() { return readJson(COURSES_FILE) || []; }
-function saveCourses(arr) { writeJson(COURSES_FILE, arr); logHistory('courses.update', { count: arr.length }); }
-
-app.get('/api/v3/courses', requireAuth, (req, res) => res.json({ courses: loadCourses() }));
-app.post('/api/v3/courses', requireAuth, (req, res) => {
-  const { name, url, notes = '', tags = [] } = req.body || {};
-  if (!name || !url) return res.status(400).json({ error: 'name+url required' });
-  const arr = loadCourses();
-  const c = { id: id('c'), name, url, notes, tags, createdAt: now() };
-  arr.unshift(c); saveCourses(arr); logHistory('courses.create', { id: c.id });
-  return res.json({ ok: true, course: c });
-});
-app.patch('/api/v3/courses/:id', requireAuth, (req, res) => {
-  const arr = loadCourses(); const c = arr.find(x => x.id === req.params.id);
-  if (!c) return res.status(404).json({ error: 'not found' });
-  Object.assign(c, req.body, { updatedAt: now() }); saveCourses(arr); logHistory('courses.update', { id: c.id }); return res.json({ ok: true, course: c });
-});
-app.delete('/api/v3/courses/:id', requireAuth, (req,res)=>{ const arr=loadCourses(); const idx=arr.findIndex(x=>x.id===req.params.id); if(idx>=0){arr.splice(idx,1); saveCourses(arr); logHistory('courses.delete',{id:req.params.id}); return res.json({ok:true});} return res.status(404).json({error:'notfound'}); });
-
-// ---------- Watchlist (YouTube) ----------
-function loadWatch() { return readJson(WATCH_FILE) || []; }
-function saveWatch(arr) { writeJson(WATCH_FILE, arr); logHistory('watch.update', { count: arr.length }); }
-
-app.get('/api/v3/watch', requireAuth, (req,res)=>res.json({ watch: loadWatch() }));
-app.post('/api/v3/watch', requireAuth, (req,res)=>{
-  const { url, title = '', thumbnail = '', tags = [] } = req.body || {};
-  if (!url) return res.status(400).json({ error: 'url required' });
-  const arr = loadWatch(); const w = { id: id('v'), url, title, thumbnail, notes: '', tags, seen:false, createdAt: now() }; arr.unshift(w); saveWatch(arr); logHistory('watch.add',{id:w.id}); return res.json({ ok:true, item:w });
-});
-app.patch('/api/v3/watch/:id', requireAuth, (req,res)=>{ const arr=loadWatch(); const w=arr.find(x=>x.id===req.params.id); if(!w) return res.status(404).json({error:'notfound'}); Object.assign(w, req.body, { updatedAt: now() }); saveWatch(arr); logHistory('watch.update',{id:w.id}); return res.json({ok:true,item:w}); });
-app.delete('/api/v3/watch/:id', requireAuth, (req,res)=>{ const arr=loadWatch(); const idx=arr.findIndex(x=>x.id===req.params.id); if(idx>=0){arr.splice(idx,1); saveWatch(arr); logHistory('watch.delete',{id:req.params.id}); return res.json({ok:true});} return res.status(404).json({error:'notfound'}) });
-
-// ---------- Topics / Knowledge Vault ----------
-function loadTopics(){ return readJson(TOPICS_FILE) || []; }
-function saveTopics(arr){ writeJson(TOPICS_FILE, arr); logHistory('topics.update',{count:arr.length}); }
-
-app.get('/api/v3/topics', requireAuth, (req,res)=>res.json({ topics: loadTopics() }));
-app.post('/api/v3/topics', requireAuth, (req,res)=>{ const { name } = req.body||{}; if(!name) return res.status(400).json({error:'name required'}); const arr=loadTopics(); const t={id:id('t'),name,children:[],notes:'',tags:[],createdAt:now()}; arr.unshift(t); saveTopics(arr); logHistory('topics.create',{id:t.id}); return res.json({ok:true,topic:t}); });
-app.patch('/api/v3/topics/:id', requireAuth, (req,res)=>{ const arr=loadTopics(); const t=arr.find(x=>x.id===req.params.id); if(!t) return res.status(404).json({error:'notfound'}); Object.assign(t, req.body, { updatedAt: now() }); saveTopics(arr); logHistory('topics.update',{id:t.id}); return res.json({ok:true,topic:t}); });
-app.delete('/api/v3/topics/:id', requireAuth, (req,res)=>{ const arr=loadTopics(); const idx=arr.findIndex(x=>x.id===req.params.id); if(idx>=0){arr.splice(idx,1); saveTopics(arr); logHistory('topics.delete',{id:req.params.id}); return res.json({ok:true});} return res.status(404).json({error:'notfound'}) });
-
-// add child
-app.post('/api/v3/topics/:id/children', requireAuth, (req,res)=>{ const arr=loadTopics(); const t=arr.find(x=>x.id===req.params.id); if(!t) return res.status(404).json({error:'notfound'}); const { name } = req.body||{}; if(!name) return res.status(400).json({error:'name required'}); const child={id:id('st'),name,notes:'',tags:[]}; t.children = t.children || []; t.children.push(child); saveTopics(arr); logHistory('topics.child.create',{topicId:t.id,childId:child.id}); return res.json({ok:true,child}); });
-
-// ---------- Sessions (focus/pomodoro) logging (NO XP) ----------
-function loadSessions(){ return readJson(SESSIONS_FILE) || []; }
-function saveSessions(arr){ writeJson(SESSIONS_FILE, arr); logHistory('sessions.update',{count:arr.length}); }
-
-app.get('/api/v3/sessions', requireAuth, (req,res)=>res.json({ sessions: loadSessions() }));
-app.post('/api/v3/sessions', requireAuth, (req,res)=>{
-  const { type='focus', durationMinutes=25, metadata={} } = req.body || {};
-  const arr = loadSessions();
-  const s = { id: id('s'), type, durationMinutes, metadata, createdAt: now() };
-  arr.unshift(s); saveSessions(arr); logHistory('sessions.create', { id: s.id, type, durationMinutes });
-  return res.json({ ok:true, session: s });
-});
-
-// ---------- Notes metadata + versioned encrypted blobs ----------
-function loadNotesIndex(){ return readJson(NOTES_INDEX) || []; }
-function saveNotesIndex(arr){ writeJson(NOTES_INDEX, arr); logHistory('notes.index.update',{count:arr.length}); }
-
-// create new note (metadata + optional blob)
-app.post('/api/v3/notes', requireAuth, async (req,res)=>{
-  /**
-   * body:
-   * { id? , title, type, tags[], summary, blob?: { ciphertext, iv, meta } , encryptionMode?: 'client-only'|'server-assisted'|'hybrid' }
-   *
-   * - client-only: client sends encrypted blob; server only stores ciphertext
-   * - server-assisted: client sends plaintext in 'blob.plaintext' and server encrypts it using server master key (derived from server secret)
-   * - hybrid: client sends encrypted blob; server additionally wraps with server envelope (optional)
-   */
-  const { id: maybeId, title, type='general', tags=[], summary='', blob, encryptionMode } = req.body || {};
-  if (!title) return res.status(400).json({ error: 'title required' });
-  const nid = maybeId || id('n');
-  const notes = loadNotesIndex();
-  const entry = { id: nid, title, type, tags, summary, createdAt: now(), updatedAt: now() };
-  notes.unshift(entry);
-  saveNotesIndex(notes);
-
-  // Ensure blob dir
-  const noteDir = path.join(BLOBS_DIR, nid);
-  if (!fs.existsSync(noteDir)) fs.mkdirSync(noteDir, { recursive: true });
-
-  // determine encryption policy
-  const metaConf = readJson(META_FILE);
-  const profile = encryptionMode || metaConf.encryptionProfile || 'client-only';
-
-  // If client sent plaintext (server-assisted), encrypt via server key
-  if (blob && blob.plaintext && profile === 'server-assisted') {
-    try {
-      const serverKey = crypto.scryptSync(JWT_SECRET, 'server-key-salt-v3', 32);
-      const gz = gzipBufferSync(Buffer.from(blob.plaintext, 'utf8'));
-      const enc = aesGcmEncrypt(serverKey, gz);
-      const versionMeta = { iv: enc.iv, checksum: sha256Hex(enc.ciphertext), mode: 'server-assisted', meta: blob.meta || {} };
-      // write gzipped encrypted blob as versions/<timestamp>.json.gz content: {ciphertext,iv,meta}
-      const verPath = path.join(noteDir, 'versions');
-      if (!fs.existsSync(verPath)) fs.mkdirSync(verPath);
-      const filename = path.join(verPath, `${Date.now()}.json.gz`);
-      fs.writeFileSync(filename, gzipBufferSync(Buffer.from(JSON.stringify({ ciphertext: enc.ciphertext, iv: enc.iv, meta: versionMeta }))));
-    } catch (e) { console.error('server-assisted encrypt failed', e); return res.status(500).json({ error: 'server encryption failed' }); }
-  } else if (blob && blob.ciphertext && blob.iv) {
-    // client sent encrypted ciphertext (client-only or hybrid); we store as-is as a version
-    const verPath = path.join(noteDir, 'versions');
-    if (!fs.existsSync(verPath)) fs.mkdirSync(verPath);
-    const versionMeta = { iv: blob.iv, checksum: sha256Hex(blob.ciphertext), mode: profile, meta: blob.meta || {} };
-    const filename = path.join(verPath, `${Date.now()}.json.gz`);
-    fs.writeFileSync(filename, gzipBufferSync(Buffer.from(JSON.stringify({ ciphertext: blob.ciphertext, iv: blob.iv, meta: versionMeta }))));
+  function niceDate(d = new Date()){
+    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
   }
 
-  logHistory('notes.create', { id: nid, title, profile });
-  return res.json({ ok: true, note: entry });
-});
-
-// list versions for a note
-app.get('/api/v3/notes/:id/versions', requireAuth, (req,res)=>{
-  const nid = req.params.id;
-  const verDir = path.join(BLOBS_DIR, nid, 'versions');
-  if (!fs.existsSync(verDir)) return res.status(404).json({ error: 'no versions' });
-  const files = fs.readdirSync(verDir).sort().reverse();
-  const versions = files.map(f => {
-    const ts = Number(f.split('.json.gz')[0]);
-    const data = fs.readFileSync(path.join(verDir, f));
-    // read gz content just to extract meta without decrypting ciphertext
-    try {
-      const content = JSON.parse(gunzipBufferSync(data).toString('utf8'));
-      return { filename: f, ts, meta: content.meta || null };
-    } catch (e) {
-      return { filename: f, ts, meta: null };
+  // ISO week key (Monday-first)
+  function getISOWeekKey(d = new Date()){
+    const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+    return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
+  }
+  function startOfISOWeek(d = new Date()){
+    const day = new Date(d);
+    const isoDay = (day.getDay() + 6) % 7; // 0=Mon
+    return new Date(day.getFullYear(), day.getMonth(), day.getDate() - isoDay);
+  }
+  function weekRangeText(d = new Date()){
+    const mon = startOfISOWeek(d);
+    const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+    const opts = { month:'short', day:'numeric' };
+    if (mon.getFullYear() === sun.getFullYear()){
+      return `${mon.toLocaleDateString(undefined,opts)} – ${sun.toLocaleDateString(undefined,opts)}, ${sun.getFullYear()}`;
     }
-  });
-  return res.json({ versions });
-});
-
-// download specific version (returns ciphertext and iv; server will not decrypt client-only blobs)
-app.get('/api/v3/notes/:id/versions/:file', requireAuth, (req,res)=>{
-  const nid = req.params.id;
-  const file = req.params.file;
-  const full = path.join(BLOBS_DIR, nid, 'versions', file);
-  if (!fs.existsSync(full)) return res.status(404).json({ error: 'not found' });
-  const gz = fs.readFileSync(full);
-  const payload = JSON.parse(gunzipBufferSync(gz).toString('utf8'));
-  return res.json({ ciphertext: payload.ciphertext, iv: payload.iv, meta: payload.meta });
-});
-
-// replace note metadata
-app.patch('/api/v3/notes/:id', requireAuth, (req,res)=>{
-  const nid = req.params.id;
-  const notes = loadNotesIndex();
-  const idx = notes.findIndex(n => n.id === nid);
-  if (idx < 0) return res.status(404).json({ error: 'note not found' });
-  Object.assign(notes[idx], req.body, { updatedAt: now() });
-  saveNotesIndex(notes);
-  logHistory('notes.update', { id: nid });
-  return res.json({ ok: true, note: notes[idx] });
-});
-
-// delete note (metadata + versions)
-app.delete('/api/v3/notes/:id', requireAuth, (req,res)=>{
-  const nid = req.params.id;
-  let notes = loadNotesIndex();
-  notes = notes.filter(n => n.id !== nid);
-  saveNotesIndex(notes);
-  const noteDir = path.join(BLOBS_DIR, nid);
-  if (fs.existsSync(noteDir)) fs.rmSync(noteDir, { recursive: true, force: true });
-  logHistory('notes.delete', { id: nid });
-  return res.json({ ok: true });
-});
-
-// ---------- Attachments (encrypted file uploads) ----------
-app.post('/api/v3/files/upload', requireAuth, upload.single('file'), async (req,res)=>{
-  // client should encrypt file before uploading if privacy desired; server can optionally encrypt using server key
-  try {
-    if (!req.file) return res.status(400).json({ error: 'file required' });
-    const file = req.file;
-    const originalName = file.originalname;
-    const tmpPath = file.path;
-    const idFile = id('f');
-    const destDir = path.join(FILES_DIR, idFile);
-    fs.mkdirSync(destDir, { recursive: true });
-    // by default we move file as-is (raw), compute checksum, then optionally encrypt with server key if requested
-    const raw = fs.readFileSync(tmpPath);
-    const checksum = sha256Hex(raw);
-    const meta = { originalName, checksum, size: raw.length, uploadedAt: now() };
-    // store raw file compressed
-    const gz = gzipBufferSync(raw);
-    fs.writeFileSync(path.join(destDir, 'file.gz'), gz);
-    fs.writeFileSync(path.join(destDir, 'meta.json'), JSON.stringify(meta, null, 2));
-    fs.unlinkSync(tmpPath);
-    logHistory('files.upload', { id: idFile, name: originalName });
-    return res.json({ ok: true, id: idFile, meta });
-  } catch (e) {
-    console.error(e); return res.status(500).json({ error: 'upload failed' });
+    return `${mon.toLocaleDateString(undefined,opts)} ${mon.getFullYear()} – ${sun.toLocaleDateString(undefined,opts)} ${sun.getFullYear()}`;
   }
-});
 
-// download attachment (raw)
-app.get('/api/v3/files/:id', requireAuth, (req,res)=>{
-  const idFile = req.params.id;
-  const dir = path.join(FILES_DIR, idFile);
-  if (!fs.existsSync(dir)) return res.status(404).json({ error: 'not found' });
-  const meta = readJson(path.join(dir, 'meta.json'));
-  const gz = fs.readFileSync(path.join(dir, 'file.gz'));
-  const raw = gunzipBufferSync(gz);
-  res.setHeader('Content-Disposition', `attachment; filename="${meta.originalName}"`);
-  res.setHeader('Content-Type', 'application/octet-stream');
-  return res.send(raw);
-});
-
-// ---------- Search (simple metadata search) ----------
-app.get('/api/v3/search', requireAuth, (req,res)=>{
-  const q = (req.query.q || '').toLowerCase();
-  if (!q) return res.json({ results: [] });
-  const results = [];
-  // notes
-  const notes = loadNotesIndex();
-  for (const n of notes) {
-    if ((n.title + ' ' + (n.summary || '') + ' ' + (n.tags || []).join(' ')).toLowerCase().includes(q)) results.push({ type:'note', id: n.id, title: n.title });
-  }
-  // courses
-  const courses = loadCourses();
-  for (const c of courses) {
-    if ((c.name + ' ' + (c.notes || '') + ' ' + (c.tags || []).join(' ')).toLowerCase().includes(q)) results.push({ type:'course', id: c.id, title: c.name });
-  }
-  // topics
-  const topics = loadTopics();
-  for (const t of topics) { if ((t.name + ' ' + (t.notes||'')).toLowerCase().includes(q)) results.push({ type:'topic', id:t.id, title:t.name }); }
-  // watch
-  const watch = loadWatch();
-  for (const v of watch) { if ((v.title + ' ' + (v.url||'') + ' ' + (v.notes||'')).toLowerCase().includes(q)) results.push({ type:'video', id: v.id, title: v.title || v.url }); }
-  return res.json({ results });
-});
-
-// ---------- Export / Import / Backups endpoints ----------
-app.get('/api/v3/export', requireAuth, (req,res)=>{
-  // Exports metadata + pointers (does not embed huge blobs) as JSON
-  const payload = {
-    meta: readJson(META_FILE),
-    notesIndex: loadNotesIndex(),
-    tasks: loadTasks(),
-    courses: loadCourses(),
-    watch: loadWatch(),
-    topics: loadTopics(),
-    sessions: loadSessions(),
-    exportedAt: now()
+  /* Storage wrapper with defensive JSON handling */
+  const storage = {
+    save(key, value){
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch(e){ console.warn('Storage save failed', e); }
+    },
+    load(key, fallback = null){
+      try {
+        const v = localStorage.getItem(key);
+        if (!v) return fallback;
+        return JSON.parse(v);
+      } catch(e){ console.warn('Storage load failed', e); return fallback; }
+    },
+    remove(key){ try { localStorage.removeItem(key); } catch(e){} }
   };
-  res.setHeader('Content-Disposition', `attachment; filename=thehaydensphere_export_${Date.now()}.json`);
-  res.setHeader('Content-Type', 'application/json');
-  return res.send(JSON.stringify(payload, null, 2));
-});
 
-app.post('/api/v3/import', requireAuth, (req,res)=>{
-  const payload = req.body || {};
-  if (!payload || typeof payload !== 'object') return res.status(400).json({ error: 'invalid payload' });
-  if (payload.notesIndex) saveNotesIndex(payload.notesIndex);
-  if (payload.tasks) saveTasks(payload.tasks);
-  if (payload.courses) saveCourses(payload.courses);
-  if (payload.watch) saveWatch(payload.watch);
-  if (payload.topics) saveTopics(payload.topics);
-  if (payload.sessions) saveSessions(payload.sessions);
-  logHistory('import', { summary: Object.keys(payload) });
-  return res.json({ ok: true });
-});
+  /* Toast / notification */
+  function createToastsContainer(){
+    let el = document.getElementById('mcif_toasts');
+    if (!el){
+      el = document.createElement('div');
+      el.id = 'mcif_toasts';
+      el.style.position = 'fixed';
+      el.style.right = '12px';
+      el.style.bottom = '14px';
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+      el.style.gap = '8px';
+      el.style.zIndex = 9999;
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function toast(msg, options = { time: 3000 }){
+    const c = createToastsContainer();
+    const t = document.createElement('div');
+    t.className = 'mcif_toast';
+    t.style.background = 'rgba(0,0,0,0.6)';
+    t.style.color = '#fff';
+    t.style.padding = '10px 12px';
+    t.style.borderRadius = '10px';
+    t.style.fontWeight = '700';
+    t.style.boxShadow = '0 8px 30px rgba(0,0,0,0.6)';
+    t.style.maxWidth = '320px';
+    t.style.wordBreak = 'break-word';
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(()=> { t.style.opacity = '0'; t.addEventListener('transitionend', ()=> t.remove()); }, options.time);
+  }
 
-// ---------- AI Hooks (placeholders) ----------
-app.post('/api/v3/ai/summarize', requireAuth, async (req,res) => {
-  // placeholder: client can provide plaintext and server returns a quick heuristic summary
-  const { text } = req.body || {};
-  if (!text) return res.status(400).json({ error: 'text required' });
-  // naive summary: first 200 chars + sentence break
-  const summary = text.length > 200 ? text.slice(0, 200) + '…' : text;
-  return res.json({ summary, sourceLength: text.length });
-});
-app.post('/api/v3/ai/autotag', requireAuth, async (req,res) => {
-  const { text } = req.body || {};
-  if (!text) return res.status(400).json({ error: 'text required' });
-  // naive tagger: select frequent words longer than 4 chars
-  const words = text.toLowerCase().match(/\b[a-z]{5,}\b/g) || [];
-  const freq = {};
-  words.forEach(w => freq[w] = (freq[w]||0)+1);
-  const tags = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,8).map(x=>x[0]);
-  return res.json({ tags });
-});
+  /* simple CSV/text export helper */
+  function exportJSON(name, obj){
+    const data = JSON.stringify(obj, null, 2);
+    const url = "data:text/json;charset=utf-8," + encodeURIComponent(data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 
-// ---------- Server status & debug ----------
-app.get('/api/v3/status', (req,res) => {
-  const meta = readJson(META_FILE);
-  return res.json({ ok: true, version: meta.version, ts: now() });
-});
+  /* debounce */
+  function debounce(fn, ms=250){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
 
-app.get('/api/v3/debug/summary', requireAuth, (req,res) => {
-  const summary = {
-    notesCount: (loadNotesIndex() || []).length,
-    tasks: loadTasks(),
-    courses: loadCourses().length,
-    watch: loadWatch().length,
-    topics: loadTopics().length,
-    sessions: loadSessions().length,
-    backups: fs.existsSync(BACKUP_DIR) ? fs.readdirSync(BACKUP_DIR).length : 0
+  /* =========================
+     UI Builder (creates DOM if missing)
+     ========================= */
+  function ensureAppShell(){
+    let app = document.getElementById('app');
+    if (app) return app;
+
+    app = document.createElement('div');
+    app.id = 'app';
+    document.body.appendChild(app);
+  }
+
+  /* Small CSS injection for necessary classes used by JS-created UI */
+  function injectCoreStyles(){
+    if (document.getElementById('mcif_core_styles')) return;
+    const css = `
+    :root{ --mcif-bg:#071423; --mcif-card:#0c1722; --mcif-text:#e6f6f7; --mcif-muted:#9fb0bf; --mcif-accent:#56d6b4; --mcif-accent2:#5fa8ff; --mcif-radius:12px; font-family:-apple-system,BlinkMacSystemFont,Inter,Arial,sans-serif; color-scheme:dark; }
+    #app{max-width:980px;margin:0 auto;padding:12px;}
+    .mcif_header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+    .mcif_logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--mcif-accent),var(--mcif-accent2));display:grid;place-items:center;color:#032427;font-weight:800}
+    .mcif_card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:10px;border-radius:var(--mcif-radius);border:1px solid rgba(255,255,255,0.03);box-shadow:0 12px 40px rgba(0,0,0,0.4)}
+    .mcif_row{display:flex;gap:8px;align-items:center}
+    .mcif_input{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--mcif-text);outline:none;flex:1}
+    .mcif_btn{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);color:var(--mcif-accent);font-weight:700;cursor:pointer}
+    .mcif_btn.ghost{background:transparent;color:var(--mcif-muted)}
+    .mcif_task{display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);cursor:grab}
+    .mcif_task .mcif_title{font-weight:700}
+    .mcif_task .mcif_time{min-width:64px;color:var(--mcif-muted);font-weight:800}
+    .mcif_grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+    .mcif_day{padding:8px;border-radius:10px;min-height:140px;background:transparent}
+    .mcif_toast{transition:opacity .25s ease}
+    .mcif_modal_backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);z-index:1200}
+    .mcif_modal_backdrop.show{display:flex}
+    .mcif_modal{background:var(--mcif-card);padding:12px;border-radius:12px;width:92%;max-width:540px;border:1px solid rgba(255,255,255,0.03)}
+    @media (max-width:520px){ .mcif_grid{grid-template-columns:repeat(2,1fr)} .mcif_input{font-size:16px} }
+    `;
+    const s = document.createElement('style');
+    s.id = 'mcif_core_styles';
+    s.innerHTML = css;
+    document.head.appendChild(s);
+  }
+
+  /* =========================
+     Core App State & Persistence
+     ========================= */
+
+  const DEFAULT_SETTINGS = {
+    theme: "Midnight Glass",
+    autoReset: true,
+    autoSort: true,
+    dingerEnabled: true,
+    dingerInterval: 15,
+    vibrateDinger: true,
+    recallMode: 'random', // 'off', 'random', 'triple'
+    recallMin: 5,
+    recallMax: 20,
+    lastThemeAppliedAt: null,
+    lastPlayInteraction: null
   };
-  return res.json({ summary });
-});
 
-// ---------- Helper endpoints for encryption (snapshot helpers) ----------
-app.post('/api/v3/enc/derive', requireAuth, async (req,res) => {
-  const { pin } = req.body || {};
-  if (!pin) return res.status(400).json({ error: 'pin required' });
-  try {
-    const key = await deriveKeyFromPin(pin);
-    return res.json({ key: key.toString('base64') });
-  } catch (e) {
-    return res.status(500).json({ error: 'derive failed' });
+  let STATE = {
+    date: new Date(), // current selected date
+    weekKey: getISOWeekKey(new Date()),
+    tasks: {}, // { 'YYYY-MM-DD': [task,...] }
+    templates: {}, // { name: [ {time,title,notes} ] }
+    archives: [], // list of week keys
+    sessions: [], // reading sessions
+    settings: { ...DEFAULT_SETTINGS },
+    undoStack: []
+  };
+
+  function loadState(){
+    const tasks = storage.load(TASKS_KEY, {});
+    const templates = storage.load(TEMPLATES_KEY, {});
+    const archives = storage.load(ARCHIVES_KEY, []);
+    const sessions = storage.load(SESSIONS_KEY, []);
+    const settings = storage.load(SETTINGS_KEY, null);
+    if (tasks) STATE.tasks = tasks;
+    if (templates) STATE.templates = templates;
+    if (archives) STATE.archives = archives;
+    if (sessions) STATE.sessions = sessions;
+    if (settings) STATE.settings = { ...DEFAULT_SETTINGS, ...settings };
   }
-});
-app.post('/api/v3/enc/encrypt', requireAuth, async (req,res) => {
-  const { keyBase64, payload } = req.body || {};
-  if (!keyBase64 || !payload) return res.status(400).json({ error: 'key & payload required' });
-  try {
-    const keyBuf = Buffer.from(keyBase64, 'base64');
-    const plain = Buffer.from(JSON.stringify(payload), 'utf8');
-    const gz = gzipBufferSync(plain);
-    const enc = aesGcmEncrypt(keyBuf, gz);
-    return res.json({ ciphertext: enc.ciphertext, iv: enc.iv, checksum: sha256Hex(enc.ciphertext) });
-  } catch (e) { return res.status(500).json({ error: 'encrypt failed' }); }
-});
-app.post('/api/v3/enc/decrypt', requireAuth, async (req,res) => {
-  const { keyBase64, ciphertext, iv } = req.body || {};
-  if (!keyBase64 || !ciphertext || !iv) return res.status(400).json({ error: 'key+ciphertext+iv required' });
-  try {
-    const keyBuf = Buffer.from(keyBase64, 'base64');
-    const plainGz = aesGcmDecrypt(keyBuf, ciphertext, iv);
-    const json = JSON.parse(gunzipBufferSync(plainGz).toString('utf8'));
-    return res.json({ payload: json });
-  } catch (e) { return res.status(500).json({ error: 'decrypt failed', detail: e.message }); }
-});
-
-// ---------- Startup helpers / defaults ----------
-function ensureDefaultDays() {
-  const tasks = loadJsonSafe(TASKS_FILE, { A: [], B: [] });
-  if (!tasks.A || tasks.A.length === 0) {
-    tasks.A = [
-      { id: id('t'), name: 'Reading', minutes: 60, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'Course Study', minutes: 60, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'News Study', minutes: 30, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'Bible Reading', minutes: 45, done: false, notesId: null, courseId: null, tags: [] }
-    ];
+  function persistAll(){
+    storage.save(TASKS_KEY, STATE.tasks);
+    storage.save(TEMPLATES_KEY, STATE.templates);
+    storage.save(ARCHIVES_KEY, STATE.archives);
+    storage.save(SESSIONS_KEY, STATE.sessions);
+    storage.save(SETTINGS_KEY, STATE.settings);
   }
-  if (!tasks.B || tasks.B.length === 0) {
-    tasks.B = [
-      { id: id('t'), name: 'Reading', minutes: 60, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'GED Study', minutes: 60, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'Course Study', minutes: 60, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'News Study', minutes: 30, done: false, notesId: null, courseId: null, tags: [] },
-      { id: id('t'), name: 'Bible Reading', minutes: 30, done: false, notesId: null, courseId: null, tags: [] }
-    ];
+
+  /* Undo snapshot */
+  function pushUndo(){
+    try {
+      const snap = JSON.stringify({ tasks: STATE.tasks });
+      STATE.undoStack.push(snap);
+      if (STATE.undoStack.length > UNDO_LIMIT) STATE.undoStack.shift();
+    } catch(e){}
   }
-  writeJson(TASKS_FILE, tasks);
-}
-function loadJsonSafe(p, fallback) { try { return readJson(p) || fallback; } catch (e) { return fallback; } }
-ensureDefaultDays();
+  function popUndo(){
+    const s = STATE.undoStack.pop();
+    if (!s) return false;
+    try {
+      const obj = JSON.parse(s);
+      STATE.tasks = obj.tasks || {};
+      persistAll();
+      UIManager.refreshAll();
+      toast('Undone');
+      return true;
+    } catch(e){ return false; }
+  }
 
-// ---------- Start server ----------
-app.listen(PORT, () => {
-  console.log(`TheHaydenSphere v3 backend listening on http://localhost:${PORT}`);
-  console.log('Ensure you call POST /api/v3/auth/setup-pin to initialize PIN if not already set.');
-  createBackup(); // initial backup on start
-});
+  /* =========================
+     Audio Engine
+     ========================= */
 
+  const AudioEngine = (function(){
+    // Two audio elements (binaural + ambient)
+    const binaural = new Audio();
+    const ambient = new Audio();
+    binaural.loop = true; ambient.loop = true;
+    // iOS: playsinline & preload attributes
+    [binaural, ambient].forEach(a=>{ a.setAttribute('playsinline',''); a.preload='auto'; });
+
+    // Track sources are either blob URLs (user files) or data URLs
+    function setBinauralSource(src){
+      if (!src) { binaural.removeAttribute('src'); binaural.load(); return; }
+      binaural.src = src;
+      binaural.load();
+    }
+    function setAmbientSource(src){
+      if (!src) { ambient.removeAttribute('src'); ambient.load(); return; }
+      ambient.src = src;
+      ambient.load();
+    }
+
+    async function playAll(){
+      try {
+        await binaural.play().catch(()=>{});
+        await ambient.play().catch(()=>{});
+      } catch(e){}
+    }
+    function pauseAll(){ try{ binaural.pause(); ambient.pause(); }catch(e){} }
+
+    function setVolumes(bv, av){
+      binaural.volume = clamp(Number(bv), 0, 1);
+      ambient.volume = clamp(Number(av), 0, 1);
+    }
+
+    // Media Session integration
+    function registerMediaSession(){
+      try {
+        if ('mediaSession' in navigator){
+          navigator.mediaSession.metadata = new MediaMetadata({ title: 'MCIF Reading Session', artist: 'MCIF' });
+          navigator.mediaSession.setActionHandler('play', playAll);
+          navigator.mediaSession.setActionHandler('pause', pauseAll);
+          // skip handlers can be added if needed
+        }
+      } catch(e){}
+    }
+
+    return {
+      binaural, ambient, setBinauralSource, setAmbientSource, playAll, pauseAll, setVolumes, registerMediaSession
+    };
+  })();
+
+  /* =========================
+     Dinger & WebAudio soft chime
+     ========================= */
+  function playSoftBeep(freq = 880, ms = 120, gain = 0.0015){
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = freq;
+      g.gain.value = gain;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      setTimeout(()=>{ try{ o.stop(); ctx.close(); } catch(e){} }, ms);
+    } catch(e){}
+  }
+
+  /* =========================
+     Reading Session Manager (recall prompts, triple retention, logging)
+     ========================= */
+
+  const ReadingManager = (function(){
+
+    let running = false;
+    let session = null;
+    let dingerIntervalId = null;
+    let recallTimeoutId = null;
+    let recallSequence = []; // for triple mode
+    let lastInteractionTs = 0;
+
+    function createSession(){
+      const s = {
+        id: uid('sess'),
+        startedAt: now(),
+        endedAt: null,
+        binauralSrc: AudioEngine.binaural.src || null,
+        ambientSrc: AudioEngine.ambient.src || null,
+        binauralVol: AudioEngine.binaural.volume || 0.7,
+        ambientVol: AudioEngine.ambient.volume || 0.5,
+        recallMode: STATE.settings.recallMode,
+        recallMin: Number(STATE.settings.recallMin),
+        recallMax: Number(STATE.settings.recallMax),
+        dingerInterval: Number(STATE.settings.dingerInterval),
+        dingerEnabled: !!STATE.settings.dingerEnabled,
+        vibrateDinger: !!STATE.settings.vibrateDinger,
+        summaries: [],
+        events: []
+      };
+      STATE.sessions.unshift(s);
+      persistAll();
+      return s;
+    }
+
+    function start(){
+      if (running) { toast('Reading already running'); return; }
+      session = createSession();
+      running = true;
+      lastInteractionTs = now();
+      // start audio if present (play user must have interacted)
+      AudioEngine.playAll().catch(()=>{});
+      AudioEngine.registerMediaSession();
+
+      // start dinger if enabled
+      if (session.dingerEnabled){
+        scheduleDinger(session.dingerInterval);
+      }
+      // schedule recalls
+      scheduleNextRecall();
+
+      toast('Reading session started');
+      UIManager.onReadingStart(session);
+    }
+
+    function stop(){
+      if (!running) { toast('Reading not active'); return; }
+      running = false;
+      session.endedAt = now();
+      session.duration = session.endedAt - session.startedAt;
+      persistAll();
+      // clear timers
+      if (dingerIntervalId) { clearInterval(dingerIntervalId); dingerIntervalId = null; }
+      if (recallTimeoutId) { clearTimeout(recallTimeoutId); recallTimeoutId = null; }
+      recallSequence = [];
+      session = null;
+      // optionally pause audio? keep as user's choice
+      toast('Reading session ended');
+      UIManager.onReadingStop();
+    }
+
+    function scheduleDinger(mins){
+      if (dingerIntervalId) clearInterval(dingerIntervalId);
+      const ms = Math.max(1, mins) * 60 * 1000;
+      dingerIntervalId = setInterval(()=>{
+        playDingerMoment();
+      }, ms);
+    }
+
+    function playDingerMoment(){
+      playSoftBeep(880, 120, 0.0016);
+      if (STATE.settings.vibrateDinger && navigator.vibrate) navigator.vibrate(150);
+      if (session) session.events.push({ type:'dinger', ts: now() });
+      persistAll();
+    }
+
+    function scheduleNextRecall(){
+      if (!running) return;
+      if (recallTimeoutId) clearTimeout(recallTimeoutId);
+      const mode = STATE.settings.recallMode;
+      if (!mode || mode === 'off') return;
+      if (mode === 'random'){
+        const min = Math.max(1, Number(STATE.settings.recallMin));
+        const max = Math.max(min, Number(STATE.settings.recallMax));
+        const mins = Math.floor(Math.random() * (max - min + 1)) + min;
+        recallTimeoutId = setTimeout(()=> { triggerRecallPrompt(); }, mins * 60 * 1000);
+      } else if (mode === 'triple'){
+        // triple: immediate -> mid -> final
+        if (!recallSequence.length){
+          recallSequence = ['immediate','mid','final'];
+          recallTimeoutId = setTimeout(()=> triggerRecallPrompt(), 2 * 60 * 1000); // 2 minutes for the immediate one
+        } else {
+          recallTimeoutId = setTimeout(()=> triggerRecallPrompt(), 8 * 60 * 1000); // 8 minutes between subsequent prompts
+        }
+      }
+    }
+
+    function triggerRecallPrompt(){
+      if (!running || !session) return;
+      // Build prompt UI modal (non-blocking fallback to prompt only if necessary)
+      UIManager.showRecallPrompt({
+        onAnswer: (text, stage = null) => {
+          session.summaries.push({ stage: stage || (STATE.settings.recallMode === 'random' ? 'random' : 'recall'), ts: now(), text: text });
+          session.events.push({ type:'recall', ts: now(), stage: stage || null });
+          persistAll();
+          toast('Summary saved');
+          scheduleNextRecall();
+        },
+        onCancel: () => {
+          session.events.push({ type:'recall_cancel', ts: now() }); persistAll(); scheduleNextRecall();
+        },
+        stage: recallSequence.length ? recallSequence.shift() : null
+      });
+    }
+
+    function immediateSummary(text){
+      if (!session) return;
+      session.summaries.push({ stage:'immediate', ts: now(), text });
+      persistAll();
+    }
+
+    function exportSessions(){
+      exportJSON('mcif_sessions.json', STATE.sessions);
+    }
+
+    function getSessions(){ return STATE.sessions; }
+
+    return {
+      start, stop, scheduleDinger, triggerRecallPrompt, immediateSummary, exportSessions, getSessions
+    };
+  })();
+
+  /* =========================
+     UI Manager: builds UI, binds events, handles updates
+     ========================= */
+
+  const UIManager = (function(){
+
+    // We'll build the entire compact iPhone UI inside #app if not present.
+    let root = null;
+    let elements = {};
+
+    function buildShell(){
+      ensureAppShell();
+      injectCoreStyles();
+      root = document.getElementById('app');
+
+      // top header
+      const header = document.createElement('div');
+      header.className = 'mcif_header';
+      header.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="mcif_logo" aria-hidden="true">MCIF</div>
+          <div>
+            <div style="font-weight:800;font-size:16px">MCIF Scheduler</div>
+            <div style="font-size:12px;color:var(--mcif-muted)">Compact • iPhone-optimized • Local-first</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="mcif_kbd" id="mcif_weekBadge" style="background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:8px;color:var(--mcif-muted);font-weight:800"></div>
+          <button class="mcif_btn" id="mcif_todayBtn">Today</button>
+          <button class="mcif_btn" id="mcif_settingsBtn">Settings</button>
+        </div>
+      `;
+      root.appendChild(header);
+
+      // main content container
+      const main = document.createElement('div');
+      main.id = 'mcif_main';
+      main.style.display = 'grid';
+      main.style.gridTemplateColumns = '1fr';
+      main.style.gap = '12px';
+      root.appendChild(main);
+
+      // daily card
+      const dailyCard = document.createElement('div'); dailyCard.className = 'mcif_card';
+      dailyCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div id="mcif_dateLabel" style="font-weight:900;"></div>
+            <div id="mcif_tzLabel" style="font-size:12px;color:var(--mcif-muted)"></div>
+          </div>
+          <div style="font-size:12px;color:var(--mcif-muted)">Auto-save • Weekly archive</div>
+        </div>
+        <div style="height:8px"></div>
+        <div class="mcif_row">
+          <input id="mcif_taskInput" class="mcif_input" placeholder="New task — type and press Add" aria-label="Task title" />
+          <input id="mcif_timeInput" class="mcif_input" type="time" style="width:120px" />
+          <button id="mcif_addBtn" class="mcif_btn">Add</button>
+        </div>
+        <div style="height:8px"></div>
+        <div id="mcif_taskList" class="mcif_task_list" style="display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;-webkit-overflow-scrolling:touch"></div>
+      `;
+      main.appendChild(dailyCard);
+
+      // week grid
+      const weekCard = document.createElement('div'); weekCard.className = 'mcif_card';
+      weekCard.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div id="mcif_weekRange" style="font-weight:900"></div>
+          <div>
+            <button id="mcif_prevWeek" class="mcif_btn mcif_ghost">◀</button>
+            <button id="mcif_nextWeek" class="mcif_btn mcif_ghost">▶</button>
+          </div>
+        </div>
+        <div style="height:8px"></div>
+        <div id="mcif_weekGrid" class="mcif_grid"></div>
+      `;
+      main.appendChild(weekCard);
+
+      // bottom row: timeline + reading controls
+      const bottomRow = document.createElement('div'); bottomRow.style.display='flex'; bottomRow.style.gap='8px'; bottomRow.style.alignItems='flex-start';
+      bottomRow.innerHTML = `
+        <div id="mcif_timeline" class="mcif_card" style="flex:1;min-height:120px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800">Timeline (06:00–22:00)</div>
+            <div style="font-size:12px;color:var(--mcif-muted)">Tap day cell to open timeline</div>
+          </div>
+          <div id="mcif_timeBars" style="margin-top:8px;color:var(--mcif-muted)">Tap a day to show its timeline here.</div>
+        </div>
+        <div id="mcif_readingCard" class="mcif_card" style="width:340px;max-width:44vw">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-weight:800">Reading Mode</div>
+            <div style="font-size:12px;color:var(--mcif-muted)">Audio • Recall • Sessions</div>
+          </div>
+          <div style="height:6px"></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label class="small" style="color:var(--mcif-muted)">Binaural (upload)</label>
+            <input id="mcif_binauralFile" type="file" accept="audio/*" />
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="mcif_binauralPlay" class="mcif_btn mcif_ghost">Play</button>
+              <input id="mcif_binauralVol" type="range" min="0" max="1" step="0.01" value="0.7" style="flex:1" />
+            </div>
+
+            <label class="small" style="color:var(--mcif-muted)">Ambient soundtrack</label>
+            <input id="mcif_ambientFile" type="file" accept="audio/*" />
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="mcif_ambientPlay" class="mcif_btn mcif_ghost">Play</button>
+              <input id="mcif_ambientVol" type="range" min="0" max="1" step="0.01" value="0.5" style="flex:1" />
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+              <div style="display:flex;gap:8px;align-items:center">
+                <label class="small" style="color:var(--mcif-muted)">Dinger (mins)</label>
+                <input id="mcif_dingerInterval" type="number" min="1" max="180" value="${STATE.settings.dingerInterval}" style="width:92px" />
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <label style="display:flex;gap:6px;align-items:center;color:var(--mcif-muted)"><input id="mcif_vibrateDinger" type="checkbox" ${STATE.settings.vibrateDinger ? 'checked' : ''} />Vibrate</label>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="mcif_startReading" class="mcif_btn">Start</button>
+              <button id="mcif_stopReading" class="mcif_btn mcif_ghost">Stop</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <label class="small" style="color:var(--mcif-muted)">Memory recall</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <select id="mcif_recallMode" class="mcif_input" style="width:160px">
+                  <option value="off">Off</option>
+                  <option value="random">Randomized Prompts</option>
+                  <option value="triple">Ultimate Retention (3 prompts)</option>
+                </select>
+                <div style="font-size:12px;color:var(--mcif-muted)">Range</div>
+                <input id="mcif_recallMin" type="number" min="1" value="${STATE.settings.recallMin}" style="width:64px" />
+                <input id="mcif_recallMax" type="number" min="1" value="${STATE.settings.recallMax}" style="width:64px" />
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px">
+              <button id="mcif_openSessions" class="mcif_btn mcif_ghost">Session Log</button>
+              <button id="mcif_exportSessions" class="mcif_btn mcif_ghost">Export Log</button>
+            </div>
+          </div>
+        </div>
+      `;
+      root.appendChild(bottomRow);
+
+      // hidden audio elements appended to body (for more control)
+      const audioContainer = document.createElement('div');
+      audioContainer.style.display = 'none';
+      audioContainer.innerHTML = `
+        <audio id="mcif_audio_binaural" loop playsinline></audio>
+        <audio id="mcif_audio_ambient" loop playsinline></audio>
+      `;
+      document.body.appendChild(audioContainer);
+
+      // modals: recall prompt, edit task, settings, sessions log
+      const modalBackdrop = document.createElement('div');
+      modalBackdrop.className = 'mcif_modal_backdrop';
+      modalBackdrop.id = 'mcif_modal';
+      modalBackdrop.innerHTML = `<div class="mcif_modal" id="mcif_modal_inner"></div>`;
+      document.body.appendChild(modalBackdrop);
+
+      // sessions log modal
+      const logModal = document.createElement('div');
+      logModal.className = 'mcif_modal_backdrop';
+      logModal.id = 'mcif_log_modal';
+      logModal.innerHTML = `<div class="mcif_modal" style="max-height:80vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center"><strong>Session Log</strong><button id="mcif_closeLog" class="mcif_btn mcif_ghost">Close</button></div><div id="mcif_sessions_area" style="margin-top:8px"></div></div>`;
+      document.body.appendChild(logModal);
+
+      // settings modal (themes + templates)
+      const settingsModal = document.createElement('div');
+      settingsModal.className = 'mcif_modal_backdrop';
+      settingsModal.id = 'mcif_settings_modal';
+      settingsModal.innerHTML = `<div class="mcif_modal"><div style="display:flex;justify-content:space-between;align-items:center"><strong>Settings</strong><button id="mcif_closeSettingsModal" class="mcif_btn mcif_ghost">Close</button></div><div style="margin-top:8px"><div><strong>Theme</strong><div id="mcif_theme_chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div></div><div style="margin-top:12px"><strong>Templates</strong><div style="display:flex;gap:8px;margin-top:8px"><input id="mcif_newTemplateName" class="mcif_input" placeholder="Template name"><input id="mcif_newTemplateBody" class="mcif_input" placeholder='Lines: "HH:MM — Title"'><button id="mcif_saveTemplate" class="mcif_btn">Save</button></div><div id="mcif_templates_list" style="margin-top:8px"></div></div></div></div>`;
+      document.body.appendChild(settingsModal);
+
+      // put references to elements into 'elements' map
+      elements = {
+        weekBadge: document.getElementById('mcif_weekBadge'),
+        todayBtn: document.getElementById('mcif_todayBtn'),
+        settingsBtn: document.getElementById('mcif_settingsBtn'),
+        dateLabel: document.getElementById('mcif_dateLabel'),
+        tzLabel: document.getElementById('mcif_tzLabel'),
+        taskInput: document.getElementById('mcif_taskInput'),
+        timeInput: document.getElementById('mcif_timeInput'),
+        addBtn: document.getElementById('mcif_addBtn'),
+        taskList: document.getElementById('mcif_taskList'),
+        weekGrid: document.getElementById('mcif_weekGrid'),
+        weekRange: document.getElementById('mcif_weekRange'),
+        prevWeek: document.getElementById('mcif_prevWeek'),
+        nextWeek: document.getElementById('mcif_nextWeek'),
+        timeline: document.getElementById('mcif_timeBars'),
+        binauralFile: document.getElementById('mcif_binauralFile'),
+        ambientFile: document.getElementById('mcif_ambientFile'),
+        binauralPlay: document.getElementById('mcif_binauralPlay'),
+        ambientPlay: document.getElementById('mcif_ambientPlay'),
+        binauralVol: document.getElementById('mcif_binauralVol'),
+        ambientVol: document.getElementById('mcif_ambientVol'),
+        dingerInterval: document.getElementById('mcif_dingerInterval'),
+        vibrateDinger: document.getElementById('mcif_vibrateDinger'),
+        startReading: document.getElementById('mcif_startReading'),
+        stopReading: document.getElementById('mcif_stopReading'),
+        recallMode: document.getElementById('mcif_recallMode'),
+        recallMin: document.getElementById('mcif_recallMin'),
+        recallMax: document.getElementById('mcif_recallMax'),
+        openSessions: document.getElementById('mcif_openSessions'),
+        exportSessions: document.getElementById('mcif_exportSessions'),
+        audioBinauralEl: document.getElementById('mcif_audio_binaural'),
+        audioAmbientEl: document.getElementById('mcif_audio_ambient'),
+        modal: document.getElementById('mcif_modal'),
+        modalInner: document.getElementById('mcif_modal_inner'),
+        logModal: document.getElementById('mcif_log_modal'),
+        sessionsArea: document.getElementById('mcif_sessions_area'),
+        closeLogBtn: document.getElementById('mcif_closeLog'),
+        settingsModal: document.getElementById('mcif_settings_modal'),
+        closeSettingsModal: document.getElementById('mcif_closeSettingsModal'),
+        themeChips: document.getElementById('mcif_theme_chips'),
+        newTemplateName: document.getElementById('mcif_newTemplateName'),
+        newTemplateBody: document.getElementById('mcif_newTemplateBody'),
+        saveTemplateBtn: document.getElementById('mcif_saveTemplate'),
+        templatesList: document.getElementById('mcif_templates_list'),
+      };
+
+      // set initial UI texts
+      elements.weekBadge.textContent = STATE.weekKey;
+      elements.dateLabel.textContent = niceDate(STATE.date);
+      elements.tzLabel.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+
+      // attach audio elements to AudioEngine
+      // use audio element provided in DOM to keep consistent behavior
+      AudioEngine.setBinauralSource(elements.audioBinauralEl.src || '');
+      AudioEngine.setAmbientSource(elements.audioAmbientEl.src || '');
+      // replace audio engine elements with the real DOM ones
+      AudioEngine.binaural = elements.audioBinauralEl;
+      AudioEngine.ambient = elements.audioAmbientEl;
+      elements.audioBinauralEl.loop = true; elements.audioAmbientEl.loop = true;
+    }
+
+    /* populate themes chips */
+    const THEMES = {
+      "Graphite Minimal": { '--mcif-bg':'#0b0b0b','--mcif-card':'#111111','--mcif-text':'#e6eef6','--mcif-accent':'#6ee7b7' },
+      "Cerulean Blueprint": { '--mcif-bg':'#071029','--mcif-card':'#07192a','--mcif-text':'#eaf6ff','--mcif-accent':'#5fa8ff' },
+      "Ivory Stone": { '--mcif-bg':'#fbf8f5','--mcif-card':'#ffffff','--mcif-text':'#0b0b0b','--mcif-accent':'#d4b35e' },
+      "Zen Ice": { '--mcif-bg':'#f6fbfe','--mcif-card':'#ffffff','--mcif-text':'#052033','--mcif-accent':'#8fd3ff' },
+      "Neon Focus": { '--mcif-bg':'#071428','--mcif-card':'#071827','--mcif-text':'#eaf0ff','--mcif-accent':'#39f' },
+      "Sandstone Mode": { '--mcif-bg':'#f5efe6','--mcif-card':'#fffaf5','--mcif-text':'#1b160f','--mcif-accent':'#c89b6c' },
+      "Polished Steel": { '--mcif-bg':'#0b1013','--mcif-card':'#07101a','--mcif-text':'#dfeeff','--mcif-accent':'#7fb2ff' },
+      "Midnight Glass": { '--mcif-bg':'#03060a','--mcif-card':'#071019','--mcif-text':'#e6f6f3','--mcif-accent':'#4de1c4' },
+      "Aurora Pulse": { '--mcif-bg':'#031021','--mcif-card':'#071822','--mcif-text':'#eaf0ff','--mcif-accent':'#7a6bff' },
+      "Paper White Classic": { '--mcif-bg':'#ffffff','--mcif-card':'#ffffff','--mcif-text':'#0b0b0b','--mcif-accent':'#2b6ea3' }
+    };
+
+    function populateThemeChips(){
+      elements.themeChips.innerHTML = '';
+      for (const name of Object.keys(THEMES)){
+        const chip = document.createElement('div');
+        chip.className = 'mcif_theme_chip';
+        chip.style.display = 'inline-flex';
+        chip.style.alignItems = 'center';
+        chip.style.gap = '8px';
+        chip.style.padding = '6px 8px';
+        chip.style.borderRadius = '999px';
+        chip.style.cursor = 'pointer';
+        chip.style.border = '1px solid rgba(255,255,255,0.03)';
+        chip.innerHTML = `<div style="width:36px;height:18px;border-radius:6px;background:linear-gradient(90deg, ${THEMES[name]['--mcif-accent'] || '#fff'}, ${THEMES[name]['--mcif-accent2'] || '#000'})"></div><div style="font-size:13px">${name}</div>`;
+        chip.addEventListener('click', ()=> applyTheme(name));
+        elements.themeChips.appendChild(chip);
+      }
+    }
+
+    function applyTheme(name){
+      const t = THEMES[name] || THEMES['Midnight Glass'];
+      for (const k of Object.keys(t)) document.documentElement.style.setProperty(k, t[k]);
+      STATE.settings.theme = name;
+      STATE.settings.lastThemeAppliedAt = now();
+      storage.save(SETTINGS_KEY, STATE.settings);
+      toast(`Theme applied: ${name}`);
+    }
+
+    /* render templates area */
+    function renderTemplates(){
+      elements.templatesList.innerHTML = '';
+      for (const key of Object.keys(STATE.templates || {})){
+        const el = document.createElement('div');
+        el.style.display = 'flex'; el.style.justifyContent = 'space-between'; el.style.alignItems='center'; el.style.marginBottom='6px';
+        el.innerHTML = `<div><strong>${esc(key)}</strong><div style="font-size:12px;color:var(--mcif-muted)">${STATE.templates[key].length} tasks</div></div><div style="display:flex;gap:8px"><button class="mcif_btn mcif_ghost" data-apply="${esc(key)}">Apply</button><button class="mcif_btn mcif_ghost" data-delete="${esc(key)}">Delete</button></div>`;
+        elements.templatesList.appendChild(el);
+      }
+      // bind
+      elements.templatesList.querySelectorAll('[data-apply]').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const nm = b.getAttribute('data-apply');
+          applyTemplate(nm);
+        });
+      });
+      elements.templatesList.querySelectorAll('[data-delete]').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          const nm = b.getAttribute('data-delete');
+          if (confirm('Delete template?')) { delete STATE.templates[nm]; persistAll(); renderTemplates(); populateTemplateSelect(); toast('Template deleted'); }
+        });
+      });
+      populateTemplateSelect();
+    }
+
+    function populateTemplateSelect(){
+      const sel = document.getElementById('mcif_template_select') || null;
+      // if not present, create small select under main controls
+      if (!sel){
+        // we avoid changing DOM too much; but if user wants select in UI, they can add
+        return;
+      }
+      sel.innerHTML = '<option value="">Templates</option>';
+      for (const k of Object.keys(STATE.templates || {})){
+        const v = encodeURIComponent(k);
+        sel.innerHTML += `<option value="${v}">${k}</option>`;
+      }
+    }
+
+    /* =========================
+       Task rendering & interactions
+       ========================= */
+
+    function renderHeader(){
+      const wk = getISOWeekKey(STATE.date);
+      STATE.weekKey = wk;
+      elements.weekBadge.textContent = wk;
+      elements.dateLabel.textContent = niceDate(STATE.date);
+      elements.tzLabel.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
+      elements.weekRange.textContent = weekRangeText(STATE.date);
+    }
+
+    function renderTasksForDate(dateKey){
+      // dateKey = 'YYYY-MM-DD'
+      const list = elements.taskList;
+      list.innerHTML = '';
+      const arr = STATE.tasks[dateKey] || [];
+      if (STATE.settings.autoSort) arr.sort((a,b)=> (a.time||'').localeCompare(b.time||'') || a.createdAt - b.createdAt);
+      if (!arr.length){
+        const hint = document.createElement('div'); hint.className = 'mcif_task'; hint.style.opacity = '0.6'; hint.textContent = 'No tasks for this day.';
+        list.appendChild(hint); return;
+      }
+      arr.forEach((t, idx)=>{
+        const node = document.createElement('div');
+        node.className = 'mcif_task';
+        node.draggable = true;
+        node.dataset.id = t.id;
+        node.dataset.date = dateKey;
+        node.innerHTML = `<div class="mcif_time">${esc(t.time||'—')}</div><div style="flex:1"><div class="mcif_title">${esc(t.title)}</div><div class="mcif_meta" style="font-size:12px;color:var(--mcif-muted)">${esc(t.notes||'')}</div></div><div style="display:flex;gap:8px"><button class="mcif_btn mcif_ghost" data-act="edit">✎</button><button class="mcif_btn mcif_ghost" data-act="dup">⤷</button><button class="mcif_btn mcif_ghost" data-act="del">🗑</button></div>`;
+        // drag handlers
+        node.addEventListener('dragstart', (e)=>{
+          node.classList.add('dragging');
+          try { e.dataTransfer.setData('text/mcif_task', t.id); e.dataTransfer.effectAllowed = 'move'; } catch(e){}
+        });
+        node.addEventListener('dragend', ()=> node.classList.remove('dragging'));
+        // actions
+        node.querySelector('[data-act="edit"]').addEventListener('click', (ev)=> { ev.stopPropagation(); openEditTaskModal(t, dateKey); });
+        node.querySelector('[data-act="dup"]').addEventListener('click', (ev)=> { ev.stopPropagation(); duplicateTask(t, dateKey); });
+        node.querySelector('[data-act="del"]').addEventListener('click', (ev)=> { ev.stopPropagation(); removeTaskConfirm(t.id, dateKey); });
+        node.addEventListener('click', ()=> openEditTaskModal(t, dateKey));
+        list.appendChild(node);
+      });
+    }
+
+    function renderWeekGrid(){
+      const grid = elements.weekGrid;
+      grid.innerHTML = '';
+      const mon = startOfISOWeek(STATE.date);
+      for (let i=0;i<7;i++){
+        const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+        const key = ymd(d);
+        const col = document.createElement('div');
+        col.className = 'mcif_day';
+        col.dataset.day = key;
+        col.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-weight:800">${DAYS[i]}</div><div style="font-size:12px;color:var(--mcif-muted)">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div></div><div class="mcif_day_tasks" style="display:flex;flex-direction:column;gap:6px;min-height:80px"></div>`;
+        // drop handlers
+        const taskList = col.querySelector('.mcif_day_tasks');
+        taskList.addEventListener('dragover', (e)=>{ e.preventDefault(); taskList.style.outline='2px dashed rgba(255,255,255,0.03)'; });
+        taskList.addEventListener('dragleave', ()=> { taskList.style.outline='none'; });
+        taskList.addEventListener('drop', (e)=>{
+          e.preventDefault(); taskList.style.outline='none';
+          try {
+            const id = e.dataTransfer.getData('text/mcif_task');
+            if (id) moveTaskToDate(id, key);
+          } catch(e){}
+        });
+        // clicking day sets main date and renders tasks
+        col.addEventListener('click', (ev)=>{
+          if (ev.target.closest('.mcif_task')) return;
+          STATE.date = new Date(d);
+          renderHeader();
+          renderTasksForDate(key);
+        });
+        grid.appendChild(col);
+      }
+      // fill day columns with tasks
+      fillWeekColumns();
+    }
+
+    function fillWeekColumns(){
+      const mon = startOfISOWeek(STATE.date);
+      for (let i=0;i<7;i++){
+        const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+        const key = ymd(d);
+        const col = elements.weekGrid.querySelector(`.mcif_day[data-day="${key}"]`);
+        const taskList = col.querySelector('.mcif_day_tasks');
+        taskList.innerHTML = '';
+        const arr = STATE.tasks[key] || [];
+        if (STATE.settings.autoSort) arr.sort((a,b)=> (a.time||'').localeCompare(b.time||'') || a.createdAt - b.createdAt);
+        if (!arr.length) {
+          const hint = document.createElement('div'); hint.className='mcif_task'; hint.style.opacity=0.6; hint.textContent='No tasks';
+          taskList.appendChild(hint); continue;
+        }
+        for (const t of arr){
+          const n = document.createElement('div'); n.className = 'mcif_task'; n.style.padding='6px'; n.innerHTML = `<div style="min-width:56px;font-weight:800;color:var(--mcif-muted)">${esc(t.time||'—')}</div><div style="flex:1;font-weight:700">${esc(t.title)}</div>`;
+          n.addEventListener('click', ()=> openEditTaskModal(t, key));
+          taskList.appendChild(n);
+        }
+      }
+    }
+
+    /* Create task added from UI */
+    function addTaskFromUI(){
+      const title = elements.taskInput.value.trim();
+      const time = elements.timeInput.value || '';
+      if (!title){ toast('Task title required'); return; }
+      const key = ymd(STATE.date);
+      pushUndo();
+      STATE.tasks[key] = STATE.tasks[key] || [];
+      STATE.tasks[key].push({ id: uid('t'), title, notes: '', time, createdAt: now(), updatedAt: now(), complete:false });
+      persistAll();
+      elements.taskInput.value = '';
+      elements.timeInput.value = '';
+      renderTasksForDate(key);
+      fillWeekColumns();
+      toast('Task added');
+    }
+
+    function removeTaskConfirm(id, dateKey){
+      if (!confirm('Delete task? This cannot be undone.')) return;
+      snapshotAndRemoveTask(id, dateKey);
+    }
+
+    function snapshotAndRemoveTask(id, dateKey){
+      pushUndo();
+      const arr = STATE.tasks[dateKey] || [];
+      const idx = arr.findIndex(x=>x.id === id);
+      if (idx >= 0) { arr.splice(idx,1); persistAll(); renderTasksForDate(dateKey); fillWeekColumns(); toast('Task deleted'); }
+    }
+
+    function duplicateTask(task, dateKey){
+      pushUndo();
+      const copy = { ...task, id: uid('t'), createdAt: now(), updatedAt: now() };
+      STATE.tasks[dateKey] = STATE.tasks[dateKey] || [];
+      STATE.tasks[dateKey].push(copy);
+      persistAll();
+      renderTasksForDate(dateKey); fillWeekColumns(); toast('Task duplicated');
+    }
+
+    function moveTaskToDate(id, destDateKey){
+      pushUndo();
+      // find task
+      for (const k of Object.keys(STATE.tasks)){
+        const arr = STATE.tasks[k] || [];
+        const idx = arr.findIndex(x=>x.id===id);
+        if (idx >= 0){
+          const [t] = arr.splice(idx,1);
+          t.dayMoved = { from: k, to: destDateKey, at: now() };
+          STATE.tasks[destDateKey] = STATE.tasks[destDateKey] || [];
+          STATE.tasks[destDateKey].push(t);
+          if (STATE.settings.autoSort) STATE.tasks[destDateKey].sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+          persistAll();
+          renderTasksForDate(ymd(STATE.date));
+          fillWeekColumns();
+          toast('Task moved');
+          return;
+        }
+      }
+    }
+
+    /* Edit modal */
+    function openEditTaskModal(task, dateKey){
+      const modal = elements.modal;
+      const inner = elements.modalInner;
+      inner.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong>Edit Task</strong><button id="mcif_closeModal" class="mcif_btn mcif_ghost">Close</button></div>
+        <div style="height:8px"></div>
+        <div><label class="small" style="color:var(--mcif-muted)">Title</label><input id="mcif_editTitle" class="mcif_input" value="${esc(task.title)}" /></div>
+        <div style="height:8px"></div>
+        <div style="display:flex;gap:8px"><select id="mcif_editDay" class="mcif_input" style="flex:1"></select><input id="mcif_editTime" class="mcif_input" type="time" style="width:120px" value="${esc(task.time || '')}" /></div>
+        <div style="height:8px"></div>
+        <div><label class="small" style="color:var(--mcif-muted)">Notes</label><textarea id="mcif_editNotes" class="mcif_input" rows="3">${esc(task.notes || '')}</textarea></div>
+        <div style="height:8px"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px"><button id="mcif_deleteModal" class="mcif_btn mcif_ghost">Delete</button><button id="mcif_saveModal" class="mcif_btn">Save</button></div>
+      `;
+      // populate day options for this week
+      const sel = inner.querySelector('#mcif_editDay');
+      sel.innerHTML = generateDayOptions(dateKey);
+      // attach events
+      inner.querySelector('#mcif_closeModal').addEventListener('click', ()=> hideModal());
+      inner.querySelector('#mcif_deleteModal').addEventListener('click', ()=>{
+        if (confirm('Delete task?')) { snapshotAndRemoveTask(task.id, dateKey); hideModal(); }
+      });
+      inner.querySelector('#mcif_saveModal').addEventListener('click', ()=>{
+        const newTitle = inner.querySelector('#mcif_editTitle').value.trim();
+        const newTime = inner.querySelector('#mcif_editTime').value || '';
+        const newNotes = inner.querySelector('#mcif_editNotes').value || '';
+        const newDay = inner.querySelector('#mcif_editDay').value || dateKey;
+        // remove from original
+        pushUndo();
+        const arr = STATE.tasks[dateKey] || [];
+        const idx = arr.findIndex(x=>x.id === task.id);
+        if (idx >= 0) arr.splice(idx,1);
+        const updated = { ...task, title: newTitle, time: newTime, notes: newNotes, updatedAt: now() };
+        STATE.tasks[newDay] = STATE.tasks[newDay] || [];
+        STATE.tasks[newDay].push(updated);
+        if (STATE.settings.autoSort) STATE.tasks[newDay].sort((a,b)=> (a.time||'').localeCompare(b.time||''));
+        persistAll();
+        renderTasksForDate(ymd(STATE.date));
+        fillWeekColumns();
+        hideModal();
+        toast('Task saved');
+      });
+      showModal();
+    }
+
+    function showModal(){
+      elements.modal.classList.add('show'); elements.modal.style.display = 'flex';
+      elements.modal.setAttribute('aria-hidden','false');
+    }
+    function hideModal(){
+      elements.modal.classList.remove('show'); elements.modal.style.display = 'none';
+      elements.modal.setAttribute('aria-hidden','true');
+    }
+
+    function generateDayOptions(selected){
+      const mon = startOfISOWeek(STATE.date);
+      let html = '';
+      for (let i=0;i<7;i++){
+        const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+        const k = ymd(d);
+        html += `<option value="${k}" ${k === selected ? 'selected':''}>${DAYS[i]} ${d.getMonth()+1}/${d.getDate()}</option>`;
+      }
+      return html;
+    }
+
+    /* timeline view for a day */
+    function openTimelineForDay(dateKey){
+      const dateParts = dateKey.split('-'); const d = new Date(dateParts[0], Number(dateParts[1])-1, Number(dateParts[2]));
+      elements.timeline.textContent = '';
+      const arr = STATE.tasks[dateKey] || [];
+      // build simple rows
+      for (let h = START_HOUR; h <= END_HOUR; h++){
+        const row = document.createElement('div'); row.style.display='flex'; row.style.alignItems='center'; row.style.gap='8px'; row.style.marginBottom='6px';
+        const label = document.createElement('div'); label.textContent = `${String(h).padStart(2,'0')}:00`; label.style.minWidth='56px'; label.style.color='var(--mcif-muted)'; label.style.fontWeight='800';
+        const slot = document.createElement('div'); slot.style.flex='1'; slot.style.minHeight='36px'; slot.style.borderRadius='8px'; slot.style.padding='6px'; slot.style.border='1px dashed rgba(255,255,255,0.03)';
+        // fill tasks whose hour matches h
+        const tasksHere = arr.filter(t => t.time && Number(t.time.split(':')[0]) === h);
+        for (const t of tasksHere){
+          const tn = document.createElement('div'); tn.className = 'mcif_task'; tn.style.marginBottom='6px'; tn.innerHTML = `<div style="min-width:56px;color:var(--mcif-muted);font-weight:800">${esc(t.time)}</div><div style="flex:1;font-weight:700">${esc(t.title)}</div>`;
+          tn.addEventListener('click', ()=> openEditTaskModal(t, dateKey));
+          slot.appendChild(tn);
+        }
+        row.appendChild(label); row.appendChild(slot);
+        elements.timeline.appendChild(row);
+      }
+    }
+
+    /* sessions modal rendering */
+    function openSessionsLog(){
+      const modal = elements.logModal;
+      const area = elements.sessionsArea;
+      area.innerHTML = '';
+      for (const s of STATE.sessions.slice(0,100)){
+        const el = document.createElement('div'); el.style.marginBottom = '10px';
+        el.innerHTML = `<div style="display:flex;justify-content:space-between"><strong>Session ${s.id}</strong><div style="font-size:12px;color:var(--mcif-muted)">${new Date(s.startedAt).toLocaleString()} ${s.endedAt?(' – '+new Date(s.endedAt).toLocaleString()):''}</div></div><div style="font-size:12px;color:var(--mcif-muted);margin-top:6px">Summaries: ${s.summaries?.length || 0}</div>`;
+        if (s.summaries && s.summaries.length){
+          for (const su of s.summaries) el.innerHTML += `<div style="margin-top:6px;padding:6px;border-radius:8px;background:rgba(255,255,255,0.01)">${new Date(su.ts).toLocaleTimeString()} – ${esc(su.text)}</div>`;
+        }
+        area.appendChild(el);
+      }
+      modal.classList.add('show'); modal.style.display = 'flex'; modal.setAttribute('aria-hidden','false');
+    }
+    function closeSessionsLog(){ elements.logModal.classList.remove('show'); elements.logModal.style.display = 'none'; elements.logModal.setAttribute('aria-hidden','true'); }
+
+    /* export sessions */
+    function exportSessions(){
+      exportJSON(`mcif_sessions_${new Date().toISOString()}.json`, STATE.sessions);
+    }
+
+    /* Template save */
+    function saveNewTemplate(){
+      const name = elements.newTemplateName.value.trim();
+      const body = elements.newTemplateBody.value.trim();
+      if (!name || !body) { toast('Template name + body required'); return; }
+      const lines = body.split('\n').map(l=>l.trim()).filter(Boolean);
+      const items = lines.map(l=>{
+        const m = l.match(/^(\d{1,2}:\d{2})\s*[—-]\s*(.+)$/);
+        if (m) return { time: m[1], title: m[2] };
+        return { time:'', title: l };
+      });
+      STATE.templates[name] = items;
+      persistAll();
+      elements.newTemplateName.value = ''; elements.newTemplateBody.value = '';
+      renderTemplates(); toast('Template saved');
+    }
+
+    function applyTemplate(name){
+      const n = decodeURIComponent(name);
+      if (!STATE.templates[n]) { toast('Template missing'); return; }
+      const key = ymd(STATE.date);
+      pushUndo();
+      STATE.tasks[key] = STATE.tasks[key] || [];
+      for (const item of STATE.templates[n]) {
+        STATE.tasks[key].push({ id: uid('t'), title: item.title, notes:'', time: item.time||'', createdAt: now(), updatedAt: now(), complete:false });
+      }
+      persistAll();
+      renderTasksForDate(key); fillWeekColumns(); toast(`Template "${n}" applied`);
+    }
+
+    /* template select population (if any select exists) */
+    function populateTemplateSelectIfExists(){
+      const sel = document.getElementById('mcif_template_select');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Templates</option>';
+      for (const k of Object.keys(STATE.templates || {})) sel.innerHTML += `<option value="${encodeURIComponent(k)}">${k}</option>`;
+    }
+
+    /* archives: simple UI in settings could list archives; for now persist only */
+    function archiveCurrentWeek(){
+      // store current week under key
+      const wk = getISOWeekKey(STATE.date);
+      storage.save(`${STORAGE_PREFIX}_archive_${wk}`, { key: wk, tasks: STATE.tasks, archivedAt: now() });
+      STATE.archives.unshift(wk);
+      if (STATE.archives.length > MAX_ARCHIVE_ENTRIES) STATE.archives.pop();
+      persistAll();
+    }
+
+    /* weekly rollover check - archives previous week and clears tasks when settings.autoReset */
+    function runWeeklyRolloverCheck(){
+      setInterval(()=>{
+        const newKey = getISOWeekKey(new Date());
+        if (newKey !== STATE.weekKey){
+          if (STATE.settings.autoReset){
+            // archive previous week
+            archiveCurrentWeek();
+            // reset tasks for new week
+            STATE.date = new Date();
+            STATE.weekKey = newKey;
+            STATE.tasks = {};
+            persistAll();
+            renderHeader();
+            renderTasksForDate(ymd(STATE.date));
+            renderWeekGrid();
+            toast('Week changed — archived previous week and reset tasks');
+          } else {
+            // just switch weekKey and attempt load
+            STATE.weekKey = newKey;
+            renderHeader();
+            renderWeekGrid();
+            renderTasksForDate(ymd(STATE.date));
+            toast('Week changed; autoReset is off');
+          }
+        }
+      }, 30 * 1000);
+    }
+
+    /* public refresh */
+    function refreshAll(){
+      renderHeader();
+      renderTasksForDate(ymd(STATE.date));
+      renderWeekGrid();
+      populateTemplateSelectIfExists();
+      renderTemplates();
+    }
+
+    /* event wiring */
+    function bindEvents(){
+      // add task
+      elements.addBtn.addEventListener('click', addTaskFromUI);
+      elements.taskInput.addEventListener('keydown', (e)=> { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addTaskFromUI(); });
+      elements.todayBtn.addEventListener('click', ()=> { STATE.date = new Date(); STATE.weekKey = getISOWeekKey(STATE.date); renderHeader(); refreshAll(); });
+      elements.prevWeek.addEventListener('click', ()=> { STATE.date.setDate(STATE.date.getDate() - 7); STATE.weekKey = getISOWeekKey(STATE.date); renderHeader(); refreshAll(); });
+      elements.nextWeek.addEventListener('click', ()=> { STATE.date.setDate(STATE.date.getDate() + 7); STATE.weekKey = getISOWeekKey(STATE.date); renderHeader(); refreshAll(); });
+      elements.settingsBtn.addEventListener('click', ()=> { elements.settingsModal.classList.add('show'); elements.settingsModal.style.display='flex'; elements.settingsModal.setAttribute('aria-hidden','false'); populateTemplateSelectIfExists(); renderTemplates(); });
+      elements.closeSettingsModal.addEventListener('click', ()=> { elements.settingsModal.classList.remove('show'); elements.settingsModal.style.display='none'; elements.settingsModal.setAttribute('aria-hidden','true'); });
+      // file uploads for audio
+      elements.binauralFile.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        elements.audioBinauralEl.src = url;
+        AudioEngine.setBinauralSource(url);
+        STATE.settings.lastPlayInteraction = now();
+        persistAll();
+        toast('Binaural track loaded (tap play)');
+      });
+      elements.ambientFile.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        elements.audioAmbientEl.src = url;
+        AudioEngine.setAmbientSource(url);
+        STATE.settings.lastPlayInteraction = now();
+        persistAll();
+        toast('Ambient track loaded (tap play)');
+      });
+      elements.binauralPlay.addEventListener('click', async ()=>{
+        try { await elements.audioBinauralEl.play(); elements.audioBinauralEl.volume = Number(elements.binauralVol.value); elements.audioAmbientEl.volume = Number(elements.ambientVol.value); AudioEngine.registerMediaSession(); toast('Binaural playing'); } catch(e){ toast('Playback blocked — tap screen then try again'); }
+      });
+      elements.ambientPlay.addEventListener('click', async ()=> {
+        try { await elements.audioAmbientEl.play(); elements.audioAmbientEl.volume = Number(elements.ambientVol.value); AudioEngine.registerMediaSession(); toast('Ambient playing'); } catch(e){ toast('Playback blocked — tap screen then try again'); }
+      });
+      elements.binauralVol.addEventListener('input', (e)=> { elements.audioBinauralEl.volume = Number(e.target.value); STATE.settings.binauralVol = e.target.value; persistAll(); });
+      elements.ambientVol.addEventListener('input', (e)=> { elements.audioAmbientEl.volume = Number(e.target.value); STATE.settings.ambientVol = e.target.value; persistAll(); });
+      elements.startReading.addEventListener('click', ()=> { ReadingManager.start(); });
+      elements.stopReading.addEventListener('click', ()=> { ReadingManager.stop(); });
+      elements.dingerInterval.addEventListener('change', (e)=> { STATE.settings.dingerInterval = Number(e.target.value); persistAll(); });
+      elements.vibrateDinger.addEventListener('change', (e)=> { STATE.settings.vibrateDinger = e.target.checked; persistAll(); });
+      elements.recallMode.addEventListener('change', (e)=> { STATE.settings.recallMode = e.target.value; persistAll(); });
+      elements.recallMin.addEventListener('change', (e)=> { STATE.settings.recallMin = Number(e.target.value); persistAll(); });
+      elements.recallMax.addEventListener('change', (e)=> { STATE.settings.recallMax = Number(e.target.value); persistAll(); });
+      elements.openSessions.addEventListener('click', ()=> { openSessionsLog(); });
+      elements.closeLogBtn.addEventListener('click', ()=> closeSessionsLog());
+      elements.exportSessions.addEventListener('click', ()=> { ReadingManager.exportSessions(); });
+      elements.saveTemplateBtn.addEventListener('click', saveNewTemplate);
+      // modal close on backdrop click
+      document.querySelectorAll('.mcif_modal_backdrop').forEach(m => m.addEventListener('click', (e)=> { if (e.target === m) { m.classList.remove('show'); m.style.display='none'; m.setAttribute('aria-hidden','true'); } }));
+      // undo via keyboard
+      document.addEventListener('keydown', (e)=> { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { popUndo(); } if (e.key === 'Escape') { document.querySelectorAll('.mcif_modal_backdrop').forEach(m=>{ m.classList.remove('show'); m.style.display='none'; m.setAttribute('aria-hidden','true'); }); } });
+    }
+
+    return {
+      buildShell,
+      populateThemeChips,
+      applyTheme,
+      renderHeader,
+      renderTasksForDate,
+      renderWeekGrid,
+      fillWeekColumns,
+      refreshAll,
+      bindEvents,
+      showRecallPrompt: function({ onAnswer, onCancel, stage }){
+        // build recall modal with a textarea prompt
+        const inner = elements.modalInner;
+        const stageLabel = stage ? ` — ${stage}` : '';
+        inner.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><strong>Recall Prompt${stageLabel}</strong><button id="mcif_closeModal2" class="mcif_btn mcif_ghost">Close</button></div>
+          <div style="height:8px"></div>
+          <div><p style="margin:0 0 6px 0;color:var(--mcif-muted)">Type a 1–2 sentence summary of what you just read.</p>
+          <textarea id="mcif_recall_input" rows="4" class="mcif_input"></textarea></div>
+          <div style="height:8px"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px"><button id="mcif_cancelRecall" class="mcif_btn mcif_ghost">Cancel</button><button id="mcif_saveRecall" class="mcif_btn">Save</button></div>`;
+        elements.modal.classList.add('show'); elements.modal.style.display='flex'; elements.modal.setAttribute('aria-hidden','false');
+        document.getElementById('mcif_closeModal2').addEventListener('click', ()=> { elements.modal.classList.remove('show'); elements.modal.style.display='none'; elements.modal.setAttribute('aria-hidden','true'); onCancel && onCancel(); });
+        document.getElementById('mcif_cancelRecall').addEventListener('click', ()=> { elements.modal.classList.remove('show'); elements.modal.style.display='none'; elements.modal.setAttribute('aria-hidden','true'); onCancel && onCancel(); });
+        document.getElementById('mcif_saveRecall').addEventListener('click', ()=> {
+          const val = document.getElementById('mcif_recall_input').value.trim();
+          if (!val) { toast('Please type a short summary.'); return; }
+          elements.modal.classList.remove('show'); elements.modal.style.display='none'; elements.modal.setAttribute('aria-hidden','true');
+          onAnswer && onAnswer(val, stage || null);
+        });
+      },
+      onReadingStart: function(sess){ /* UI reactions on reading start */ elements.startReading.disabled = true; elements.stopReading.disabled = false; },
+      onReadingStop: function(){ elements.startReading.disabled = false; elements.stopReading.disabled = true; }
+    };
+  })();
+
+  /* =========================
+     Initialization
+     ========================= */
+
+  function init(){
+    loadState();
+    UIManager.buildShell();
+    UIManager.populateThemeChips();
+    UIManager.refreshAll();
+    UIManager.bindEvents();
+    // set initial audio volumes if any stored
+    if (STATE.settings.binauralVol) document.getElementById('mcif_binauralVol').value = STATE.settings.binauralVol;
+    if (STATE.settings.ambientVol) document.getElementById('mcif_ambientVol').value = STATE.settings.ambientVol;
+    // add listeners for uploads to set audio engine
+    const binauralEl = document.getElementById('mcif_audio_binaural');
+    const ambientEl = document.getElementById('mcif_audio_ambient');
+    // wire audio engine to DOM elements
+    AudioEngine.binaural = binauralEl; AudioEngine.ambient = ambientEl;
+    // restore last session settings into audio elements
+    if (STATE.sessions && STATE.sessions.length){
+      const last = STATE.sessions[0];
+      if (last && last.binauralSrc) { binauralEl.src = last.binauralSrc; }
+      if (last && last.ambientSrc) { ambientEl.src = last.ambientSrc; }
+    }
+    // weekly rollover check
+    (function weeklyRollover(){ setInterval(()=>{
+      const newKey = getISOWeekKey(new Date());
+      if (newKey !== STATE.weekKey){
+        if (STATE.settings.autoReset){
+          // archive & reset
+          storage.save(`${STORAGE_PREFIX}_archive_${STATE.weekKey}`, { key: STATE.weekKey, tasks: STATE.tasks, archivedAt: now() });
+          STATE.archives.unshift(STATE.weekKey);
+          if (STATE.archives.length > MAX_ARCHIVE_ENTRIES) STATE.archives.pop();
+          // reset tasks
+          STATE.tasks = {}; persistAll();
+          STATE.date = new Date();
+          STATE.weekKey = newKey;
+          UIManager.refreshAll();
+          toast('ISO week changed — archived previous week and reset tasks');
+        } else {
+          STATE.weekKey = newKey; UIManager.renderHeader();
+        }
+      }
+    }, 30 * 1000); })();
+
+    // autosave on visibility change before unload
+    window.addEventListener('beforeunload', ()=> persistAll());
+    document.addEventListener('visibilitychange', ()=> { if (document.visibilityState === 'hidden') persistAll(); });
+    // expose MCIF object for console
+    window.MCIF = {
+      STATE, pushUndo, popUndo, exportJSON, exportSessions: () => UIManager.exportSessions, ReadingManager
+    };
+    // initial UI state
+    UIManager.renderHeader();
+    UIManager.renderTasksForDate(ymd(STATE.date));
+    UIManager.renderWeekGrid();
+    UIManager.fillWeekColumns();
+    UIManager.renderTemplates && UIManager.renderTemplates();
+    toast('MCIF Scheduler ready');
+  }
+
+  /* expose init */
+  return { init, storage, STATE, AudioEngine, ReadingManager, UIManager };
+})();
+
+/* Auto-init when script loads */
+document.addEventListener('DOMContentLoaded', ()=> { MCIF.init(); });
