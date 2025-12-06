@@ -1,165 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCIF Workflow Interface</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
-    <style>
-        /* Root styling for clean, dopamine-friendly aesthetics */
-        :root {
-            --primary-color: #4B6CB7;
-            --secondary-color: #182848;
-            --accent-color: #F9A826;
-            --bg-color: #F4F6F8;
-            --card-bg: #FFFFFF;
-            --font-family: 'Roboto', sans-serif;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCIF Task & Reading Interface</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<style>
+    :root {
+        --primary-color: #4B6CB7;
+        --secondary-color: #182848;
+        --accent-color: #F9A826;
+        --bg-color: #F4F6F8;
+        --card-bg: #FFFFFF;
+        --font-family: 'Roboto', sans-serif;
+    }
 
-        body {
-            margin: 0;
-            font-family: var(--font-family);
-            background-color: var(--bg-color);
-            color: var(--secondary-color);
-            display: flex;
+    body {
+        margin: 0;
+        font-family: var(--font-family);
+        background-color: var(--bg-color);
+        color: var(--secondary-color);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+
+    header {
+        width: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1.5rem 2rem;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    main {
+        width: 95%;
+        max-width: 1200px;
+        margin: 2rem auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .card {
+        background-color: var(--card-bg);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .workflow-step, .task-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-radius: 8px;
+        background-color: #E8EBF0;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .workflow-step:hover, .task-item:hover {
+        background-color: var(--accent-color);
+        color: white;
+    }
+
+    .workflow-step.completed, .task-item.completed {
+        background-color: #4BB543;
+        color: white;
+    }
+
+    .workflow-step span, .task-item span {
+        font-weight: 500;
+    }
+
+    button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: white;
+        background-color: var(--primary-color);
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+        background-color: var(--accent-color);
+    }
+
+    footer {
+        width: 100%;
+        text-align: center;
+        padding: 1rem 0;
+        background-color: var(--secondary-color);
+        color: white;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .workflow-step, .task-item {
             flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-        }
-
-        header {
-            width: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 1.5rem 2rem;
-            text-align: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        main {
-            width: 95%;
-            max-width: 1200px;
-            margin: 2rem 0;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        }
-
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .workflow-step {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            border-radius: 8px;
-            background-color: #E8EBF0;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .workflow-step:hover {
-            background-color: var(--accent-color);
-            color: white;
-        }
-
-        .workflow-step.completed {
-            background-color: #4BB543;
-            color: white;
-        }
-
-        .workflow-step span {
-            font-weight: 500;
+            align-items: flex-start;
         }
 
         button {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: white;
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: var(--accent-color);
-        }
-
-        footer {
             width: 100%;
-            text-align: center;
-            padding: 1rem 0;
-            background-color: var(--secondary-color);
-            color: white;
-            font-size: 0.9rem;
         }
+    }
 
-        @media (max-width: 768px) {
-            .workflow-step {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+    /* Reading mode panel */
+    #reading-mode {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-            button {
-                width: 100%;
-            }
-        }
-    </style>
+    #reading-mode textarea {
+        width: 100%;
+        height: 150px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        padding: 1rem;
+        font-size: 1rem;
+        resize: vertical;
+    }
+
+    #reading-mode-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+</style>
 </head>
 <body>
-    <header>
-        MCIF Workflow Interface
-    </header>
-    <main>
-        <div class="card">
-            <div class="section-title">User Dashboard</div>
-            <div id="user-status">Loading user data...</div>
-        </div>
+<header>
+    MCIF Task & Reading Interface
+</header>
 
-        <div class="card">
-            <div class="section-title">Workflow Steps</div>
-            <div id="workflow-container">
-                <!-- Steps dynamically injected by workflow.js -->
-            </div>
-        </div>
+<main>
+    <!-- Dashboard -->
+    <div class="card">
+        <div class="section-title">User Dashboard</div>
+        <div id="user-status">Welcome! Loading your tasks...</div>
+    </div>
 
-        <div class="card">
-            <div class="section-title">Controls</div>
-            <button id="start-workflow">Start Workflow</button>
-            <button id="reset-workflow">Reset Workflow</button>
+    <!-- Task List -->
+    <div class="card">
+        <div class="section-title">Task List</div>
+        <div id="task-container">
+            <!-- Tasks dynamically inserted by workflow.js -->
         </div>
-    </main>
-    <footer>
-        Developed by Hayden Andrew Carr | Meta-Cognitive Intelligence Project
-    </footer>
+        <div id="task-controls">
+            <input type="text" id="new-task" placeholder="Enter new task..." />
+            <input type="time" id="task-time" />
+            <button id="add-task">Add Task</button>
+        </div>
+    </div>
 
-    <script src="workflow.js"></script>
+    <!-- Reading Mode -->
+    <div class="card" id="reading-mode">
+        <div class="section-title">Reading Mode</div>
+        <textarea id="reading-content" placeholder="Paste or type your reading material here..."></textarea>
+        <div id="reading-mode-controls">
+            <button id="start-reading">Start Session</button>
+            <button id="stop-reading">Stop Session</button>
+            <button id="toggle-binaural">Toggle Binaural Beats</button>
+            <button id="set-dinger">Set 15-min Reminder</button>
+            <button id="ultimate-retention">Ultimate Retention Mode</button>
+        </div>
+    </div>
+
+    <!-- Workflow Controls -->
+    <div class="card">
+        <div class="section-title">Workflow Controls</div>
+        <button id="start-workflow">Start Workflow</button>
+        <button id="reset-workflow">Reset Workflow</button>
+    </div>
+</main>
+
+<footer>
+    Developed by Hayden Andrew Carr | Meta-Cognitive Intelligence Project
+</footer>
+
+<script src="workflow.js"></script>
 </body>
 </html>
