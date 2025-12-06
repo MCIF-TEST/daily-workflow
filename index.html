@@ -1,1011 +1,165 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>MCIF Compact Scheduler — A2</title>
-<meta name="color-scheme" content="dark light">
-<style>
-/* =========================
-   Compact iPhone Scheduler (A2)
-   Single-file: HTML + CSS + JS
-   ========================= */
-:root{
-  --bg:#0b1220; --panel:#09121a; --card:#0c1722; --muted:#99a9b8; --text:#dff6f3;
-  --accent:#56d6b4; --accent2:#5fa8ff; --danger:#ff6b6b;
-  --radius:12px; --gap:10px;
-  font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Arial,sans-serif;
-  font-size:15px;
-  --safe-top:env(safe-area-inset-top); --safe-bottom:env(safe-area-inset-bottom);
-}
-html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#04121a 160%);color:var(--text);-webkit-font-smoothing:antialiased}
-body{display:flex;align-items:flex-start;justify-content:center;padding:calc(12px + var(--safe-top)) 10px calc(18px + var(--safe-bottom));min-height:100vh}
-.app{width:100%;max-width:980px;display:grid;gap:14px;align-content:start}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCIF Workflow Interface</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <style>
+        /* Root styling for clean, dopamine-friendly aesthetics */
+        :root {
+            --primary-color: #4B6CB7;
+            --secondary-color: #182848;
+            --accent-color: #F9A826;
+            --bg-color: #F4F6F8;
+            --card-bg: #FFFFFF;
+            --font-family: 'Roboto', sans-serif;
+        }
 
-/* Header */
-.header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:800;color:#021416}
-.title h1{margin:0;font-size:17px}
-.title p{margin:0;color:var(--muted);font-size:12px}
+        body {
+            margin: 0;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--secondary-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
 
-/* Main layout */
-.main{display:grid;grid-template-columns:1fr;gap:12px}
-.top-controls{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px}
-.kbd{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:8px;font-weight:700;color:var(--muted);font-size:13px}
-.btn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);padding:8px 12px;border-radius:999px;color:var(--accent);font-weight:700}
-.btn.ghost{background:transparent;color:var(--muted)}
-.small{font-size:13px;color:var(--muted)}
+        header {
+            width: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
 
-/* Content split: top is daily input & tasks, below is week grid */
-.content{display:grid;grid-template-columns:1fr;gap:12px}
-.card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));border-radius:12px;padding:10px;border:1px solid rgba(255,255,255,0.02)}
-.row{display:flex;gap:8px;align-items:center}
+        main {
+            width: 95%;
+            max-width: 1200px;
+            margin: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
 
-/* Inputs */
-.input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);outline:none;font-size:15px}
+        .card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
 
-/* Task list */
-.task-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;padding-right:6px;-webkit-overflow-scrolling:touch}
-.task{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);cursor:grab;user-select:none}
-.task.dragging{opacity:0.7;transform:scale(.995)}
-.time{min-width:56px;font-weight:800;color:var(--muted);font-size:13px}
-.title{flex:1;font-weight:700}
-.meta{font-size:12px;color:var(--muted)}
-.chips{display:flex;gap:6px}
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
 
-/* Week grid */
-.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.day-col{padding:8px;border-radius:10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);min-height:160px;display:flex;flex-direction:column;gap:8px}
-.day-header{display:flex;justify-content:space-between;align-items:center;font-weight:800}
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
 
-/* Timeline & Reading Mode quick panel */
-.bottom-row{display:flex;gap:8px;align-items:flex-start}
-.timeline{flex:1;padding:8px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03));border:1px solid rgba(255,255,255,0.02);min-height:120px}
-.reading-card{width:320px;max-width:45vw;padding:8px;border-radius:10px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02)}
+        .workflow-step {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #E8EBF0;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
 
-.modal-backdrop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:200}
-.modal-backdrop.show{display:flex}
-.modal{width:520px;max-width:95%;background:linear-gradient(180deg,#071a1b,#061221);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03)}
+        .workflow-step:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
 
-/* Toasts */
-.toasts{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:300}
-.toast{background:rgba(255,255,255,0.02);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);font-weight:700;color:var(--text)}
+        .workflow-step.completed {
+            background-color: #4BB543;
+            color: white;
+        }
 
-/* Settings & theme chips */
-.theme-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-.theme-preview{width:36px;height:18px;border-radius:6px;box-shadow:inset 0 1px rgba(255,255,255,0.02)}
+        .workflow-step span {
+            font-weight: 500;
+        }
 
-/* Responsive */
-@media(max-width:900px){
-  .week-grid{grid-template-columns:repeat(4,1fr)}
-  .reading-card{max-width:38vw}
-}
-@media(max-width:520px){
-  .week-grid{grid-template-columns:repeat(2,1fr)}
-  .reading-card{display:none}
-  .modal{width:92%}
-}
-</style>
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--accent-color);
+        }
+
+        footer {
+            width: 100%;
+            text-align: center;
+            padding: 1rem 0;
+            background-color: var(--secondary-color);
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .workflow-step {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="app" role="application" aria-label="MCIF Compact Scheduler">
-
-  <!-- Header -->
-  <header class="header">
-    <div class="brand">
-      <div class="logo" aria-hidden="true">MCIF</div>
-      <div class="title">
-        <h1>MCIF Scheduler</h1>
-        <p class="small">Compact • iPhone-optimized • Persistent</p>
-      </div>
-    </div>
-
-    <div class="top-controls">
-      <div class="kbd" id="weekBadge">—</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="todayBtn" class="btn">Today</button>
-        <button id="settingsBtn" class="btn ghost">Settings</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main -->
-  <main class="main">
-    <section class="content">
-
-      <!-- Daily input & task list -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <div>
-            <div id="dateLabel" style="font-weight:900"></div>
-            <div class="small" id="tzLabel"></div>
-          </div>
-          <div class="small text-muted">Auto-save • Weekly archive</div>
+    <header>
+        MCIF Workflow Interface
+    </header>
+    <main>
+        <div class="card">
+            <div class="section-title">User Dashboard</div>
+            <div id="user-status">Loading user data...</div>
         </div>
 
-        <div style="margin-top:10px;" class="row">
-          <input id="taskInput" class="input" placeholder="New task — type and press Add" aria-label="Task title">
-          <input id="timeInput" class="input" type="time" style="width:120px">
-        </div>
-
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button id="addTaskBtn" class="btn">Add</button>
-          <button id="applyTemplateBtn" class="btn ghost">Apply Template</button>
-          <select id="templateSelect" class="input" style="width:200px">
-            <option value="">Templates</option>
-          </select>
-        </div>
-
-        <div style="margin-top:12px">
-          <div class="small text-muted">Today's tasks</div>
-          <div id="taskList" class="task-list" aria-live="polite"></div>
-        </div>
-      </div>
-
-      <!-- Week grid -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div id="weekRange" style="font-weight:900"></div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button id="prevWeek" class="btn ghost">◀</button>
-            <button id="nextWeek" class="btn ghost">▶</button>
-          </div>
-        </div>
-
-        <div id="weekGrid" class="week-grid" role="list" aria-label="Week tasks"></div>
-      </div>
-
-      <!-- Timeline + reading panel -->
-      <div class="bottom-row">
-        <div class="timeline card" id="timeline">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-weight:800">Timeline (06:00–22:00)</div>
-            <div class="small text-muted">Tap day cell to open timeline</div>
-          </div>
-          <div id="timeBars" class="small text-muted">Tap any day above to open its timeline.</div>
-        </div>
-
-        <div class="reading-card card">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div style="font-weight:800">Reading Mode</div>
-            <div class="small text-muted">Sessions, audio & recall</div>
-          </div>
-
-          <!-- Audio controls -->
-          <div style="margin-top:8px">
-            <label class="small text-muted">Binaural (focus) file</label>
-            <input id="binauralFile" type="file" accept="audio/*" class="input" />
-            <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-              <button id="binauralPlay" class="btn ghost">Play</button>
-              <input id="binauralVol" type="range" min="0" max="1" step="0.01" value="0.7" />
+        <div class="card">
+            <div class="section-title">Workflow Steps</div>
+            <div id="workflow-container">
+                <!-- Steps dynamically injected by workflow.js -->
             </div>
-          </div>
-
-          <div style="margin-top:10px">
-            <label class="small text-muted">Ambient soundtrack</label>
-            <input id="ambientFile" type="file" accept="audio/*" class="input" />
-            <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
-              <button id="ambientPlay" class="btn ghost">Play</button>
-              <input id="ambientVol" type="range" min="0" max="1" step="0.01" value="0.5" />
-            </div>
-          </div>
-
-          <!-- Dinger and timers -->
-          <div style="margin-top:10px" class="small text-muted">
-            <label>Interval dinger (mins)</label>
-            <div class="row" style="margin-top:6px">
-              <input id="dingerInterval" class="input" type="number" min="1" max="180" value="15" style="width:110px" />
-              <label style="display:flex;align-items:center;gap:8px"><input id="vibrateDinger" type="checkbox" /> Vibration</label>
-            </div>
-
-            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
-              <button id="startReadingBtn" class="btn">Start</button>
-              <button id="stopReadingBtn" class="btn ghost">Stop</button>
-            </div>
-          </div>
-
-          <div style="margin-top:10px" class="small text-muted">
-            <div>Memory recall: <select id="recallMode" class="input" style="width:140px">
-              <option value="off">Off</option>
-              <option value="random">Randomized Prompts</option>
-              <option value="triple">Ultimate Retention (3 prompts)</option>
-            </select></div>
-            <div style="margin-top:6px">Random interval range (mins): <input id="recallMin" class="input" type="number" min="1" value="5" style="width:90px"/> to <input id="recallMax" class="input" type="number" min="1" value="20" style="width:90px"/></div>
-          </div>
-
-          <div style="margin-top:10px">
-            <button id="openSessionLog" class="btn ghost">Session Log</button>
-            <button id="exportSessionLog" class="btn ghost">Export Log</button>
-          </div>
         </div>
-      </div>
 
-    </section>
-  </main>
-
-  <!-- Settings modal (theme selector + other settings) -->
-  <div id="settingsModal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal">
-      <h3 style="margin:0 0 8px 0">Settings</h3>
-      <div class="row" style="gap:10px;align-items:center">
-        <div>
-          <label class="small text-muted">Theme</label>
-          <div id="themeChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>
+        <div class="card">
+            <div class="section-title">Controls</div>
+            <button id="start-workflow">Start Workflow</button>
+            <button id="reset-workflow">Reset Workflow</button>
         </div>
-      </div>
-
-      <div style="margin-top:10px">
-        <label class="small text-muted">Templates</label>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <input id="newTemplateName" class="input" placeholder="Template name" />
-          <input id="newTemplateBody" class="input" placeholder="Lines: HH:MM — Title" />
-          <button id="saveNewTemplate" class="btn">Save</button>
-        </div>
-        <div id="templatesArea" style="margin-top:8px" class="small text-muted"></div>
-      </div>
-
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
-        <button id="closeSettings" class="btn ghost">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Edit modal -->
-  <div id="editModal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal">
-      <h3 id="editModalTitle">Edit Task</h3>
-      <div style="margin-top:8px">
-        <label class="small text-muted">Title</label>
-        <input id="editTitle" class="input" />
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <select id="editDay" class="input"></select>
-        <input id="editTime" class="input" type="time" style="width:140px" />
-      </div>
-      <div style="margin-top:8px">
-        <label class="small text-muted">Notes</label>
-        <textarea id="editNotes" class="input" rows="3"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-        <button id="deleteBtn" class="btn ghost">Delete</button>
-        <button id="saveEditBtn" class="btn">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Session Log modal -->
-  <div id="logModal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal">
-      <h3>Session Log</h3>
-      <div id="sessionLogArea" style="max-height:400px;overflow:auto;margin-top:8px" class="small text-muted"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-        <button id="closeLogBtn" class="btn ghost">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toasts -->
-  <div id="toasts" class="toasts" aria-live="polite"></div>
-</div>
-
-<!-- Hidden audio elements -->
-<audio id="binauralAudio" loop crossorigin="anonymous"></audio>
-<audio id="ambientAudio" loop crossorigin="anonymous"></audio>
-
-<script>
-/* ===========================
-   MCIF Compact Scheduler — Full HTML Implementation
-   Features implemented per plan:
-   - Compact daily + weekly scheduler (A2)
-   - Autosave on every change
-   - Weekly ISO-week storage and archive
-   - Templates, apply templates
-   - Undo (simple last snapshot)
-   - Theme selector (10 themes)
-   - Reading Mode: binaural + ambient audio, dinger, randomized recall, triple retention
-   - Media Session API for background playback (where supported)
-   - Notifications & vibration support
-   - Session logging and export
-   - iPhone Safari touch optimizations
-   =========================== */
-
-/* --------------------------
-   Utilities & constants
-   -------------------------- */
-const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const START_HOUR = 6, END_HOUR = 22;
-const STORAGE_PREFIX = 'mcif_compact_v1';
-const SETTINGS_KEY = `${STORAGE_PREFIX}_settings`;
-const ARCHIVES_KEY = `${STORAGE_PREFIX}_archives`;
-const TEMPLATES_KEY = `${STORAGE_PREFIX}_templates`;
-const SESSIONS_KEY = `${STORAGE_PREFIX}_sessions`;
-
-/* DOM refs */
-const refs = {
-  weekBadge: document.getElementById('weekBadge'),
-  dateLabel: document.getElementById('dateLabel'),
-  tzLabel: document.getElementById('tzLabel'),
-  taskInput: document.getElementById('taskInput'),
-  timeInput: document.getElementById('timeInput'),
-  addTaskBtn: document.getElementById('addTaskBtn'),
-  taskList: document.getElementById('taskList'),
-  weekGrid: document.getElementById('weekGrid'),
-  weekRange: document.getElementById('weekRange'),
-  todayBtn: document.getElementById('todayBtn'),
-  prevWeek: document.getElementById('prevWeek'),
-  nextWeek: document.getElementById('nextWeek'),
-  settingsBtn: document.getElementById('settingsBtn'),
-  settingsModal: document.getElementById('settingsModal'),
-  closeSettings: document.getElementById('closeSettings'),
-  themeChips: document.getElementById('themeChips'),
-  templatesArea: document.getElementById('templatesArea'),
-  templateSelect: document.getElementById('templateSelect'),
-  saveNewTemplate: document.getElementById('saveNewTemplate'),
-  newTemplateName: document.getElementById('newTemplateName'),
-  newTemplateBody: document.getElementById('newTemplateBody'),
-  applyTemplateBtn: document.getElementById('applyTemplateBtn'),
-  templateSelectEl: document.getElementById('templateSelect'),
-  // edit modal
-  editModal: document.getElementById('editModal'),
-  editTitle: document.getElementById('editTitle'),
-  editDay: document.getElementById('editDay'),
-  editTime: document.getElementById('editTime'),
-  editNotes: document.getElementById('editNotes'),
-  saveEditBtn: document.getElementById('saveEditBtn'),
-  deleteBtn: document.getElementById('deleteBtn'),
-  // reading
-  binauralFile: document.getElementById('binauralFile'),
-  ambientFile: document.getElementById('ambientFile'),
-  binauralPlay: document.getElementById('binauralPlay'),
-  ambientPlay: document.getElementById('ambientPlay'),
-  binauralVol: document.getElementById('binauralVol'),
-  ambientVol: document.getElementById('ambientVol'),
-  dingerInterval: document.getElementById('dingerInterval'),
-  vibrateDinger: document.getElementById('vibrateDinger'),
-  startReadingBtn: document.getElementById('startReadingBtn'),
-  stopReadingBtn: document.getElementById('stopReadingBtn'),
-  recallMode: document.getElementById('recallMode'),
-  recallMin: document.getElementById('recallMin'),
-  recallMax: document.getElementById('recallMax'),
-  openSessionLog: document.getElementById('openSessionLog'),
-  exportSessionLog: document.getElementById('exportSessionLog'),
-  // modals
-  logModal: document.getElementById('logModal'),
-  sessionLogArea: document.getElementById('sessionLogArea'),
-  closeLogBtn: document.getElementById('closeLogBtn'),
-  // audio elements
-  binauralAudio: document.getElementById('binauralAudio'),
-  ambientAudio: document.getElementById('ambientAudio'),
-  // toasts
-  toasts: document.getElementById('toasts'),
-  // templates
-  templateSelect: document.getElementById('templateSelect'),
-};
-
-/* storage helpers */
-const storage = {
-  save(key, val){ localStorage.setItem(key, JSON.stringify(val)); },
-  load(key, fallback=null){ const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; },
-  remove(key){ localStorage.removeItem(key); }
-};
-
-/* theme definitions (10 themes) */
-const THEMES = {
-  "Graphite Minimal": { '--bg':'#0b0b0b','--panel':'#0e0e0e','--card':'#111111','--accent':'#6ee7b7','--text':'#e6eef6' },
-  "Cerulean Blueprint": { '--bg':'#071029','--panel':'#081426','--card':'#07192a','--accent':'#5fa8ff','--text':'#eaf6ff' },
-  "Ivory Stone": { '--bg':'#fbf8f5','--panel':'#f2efe9','--card':'#ffffff','--accent':'#d4b35e','--text':'#0b0b0b' },
-  "Zen Ice": { '--bg':'#f6fbfe','--panel':'#eef7fb','--card':'#ffffff','--accent':'#8fd3ff','--text':'#052033' },
-  "Neon Focus": { '--bg':'#071428','--panel':'#071225','--card':'#071827','--accent':'#39f','--text':'#eaf0ff' },
-  "Sandstone Mode": { '--bg':'#f5efe6','--panel':'#efe6db','--card':'#fffaf5','--accent':'#c89b6c','--text':'#1b160f' },
-  "Polished Steel": { '--bg':'#0b1013','--panel':'#0e1417','--card':'#07101a','--accent':'#7fb2ff','--text':'#dfeeff' },
-  "Midnight Glass": { '--bg':'#03060a','--panel':'#06080c','--card':'#071019','--accent':'#4de1c4','--text':'#e6f6f3' },
-  "Aurora Pulse": { '--bg':'#031021','--panel':'#071323','--card':'#071822','--accent':'#7a6bff','--text':'#eaf0ff' },
-  "Paper White Classic": { '--bg':'#ffffff','--panel':'#f7f7f7','--card':'#ffffff','--accent':'#2b6ea3','--text':'#0b0b0b' }
-};
-
-/* default app state */
-let APP = {
-  date: new Date(),
-  weekKey: null,
-  tasks: {}, // keyed by ISO date 'YYYY-MM-DD' => [task,...]
-  settings: { theme: "Midnight Glass", autoReset:true, autoSort:true },
-  templates: {},
-  archives: [],
-  sessions: [], // reading sessions & summaries
-  undoStack: []
-};
-
-/* helper: format date YYYY-MM-DD */
-function ymd(d){ const z = n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
-function niceDate(d){ return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
-
-/* ISO week key (Mon-based) */
-function getISOWeekKey(d=new Date()){
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
-  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
-}
-
-/* get monday of week */
-function startOfISOWeek(d=new Date()){ const day = new Date(d); const isoDay=(day.getDay()+6)%7; return new Date(day.getFullYear(),day.getMonth(),day.getDate()-isoDay); }
-
-/* save & load APP state */
-function persistState(){ storage.save(`${STORAGE_PREFIX}_tasks`, APP.tasks); storage.save(SETTINGS_KEY, APP.settings); storage.save(TEMPLATES_KEY, APP.templates); storage.save(ARCHIVES_KEY, APP.archives); storage.save(SESSIONS_KEY, APP.sessions); }
-function loadState(){
-  const loadedTasks = storage.load(`${STORAGE_PREFIX}_tasks`, {});
-  const s = storage.load(SETTINGS_KEY, null);
-  const t = storage.load(TEMPLATES_KEY, {});
-  const a = storage.load(ARCHIVES_KEY, []);
-  const se = storage.load(SESSIONS_KEY, []);
-  APP.tasks = loadedTasks || {};
-  if (s) APP.settings = s;
-  APP.templates = t || {};
-  APP.archives = a || [];
-  APP.sessions = se || [];
-}
-
-/* toast */
-function toast(msg, t=3000){
-  const el = document.createElement('div'); el.className='toast'; el.textContent=msg;
-  refs.toasts.appendChild(el);
-  setTimeout(()=> { el.style.opacity='0'; el.addEventListener('transitionend', ()=>el.remove()); }, t);
-}
-
-/* init */
-function init(){
-  loadState();
-  APP.weekKey = getISOWeekKey(APP.date);
-  renderHeaderAndDate();
-  buildWeekGrid();
-  renderTasksForDate(ymd(APP.date));
-  populateTemplates();
-  populateThemeChips();
-  applyTheme(APP.settings.theme);
-  bindUI();
-  runWeeklyResetCheck();
-  restoreAudioSettings();
-}
-
-/* header & date */
-function renderHeaderAndDate(){
-  refs.weekBadge.textContent = APP.weekKey;
-  refs.dateLabel.textContent = niceDate(APP.date);
-  refs.tzLabel.textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local';
-  refs.weekRange.textContent = weekRangeText(APP.date);
-}
-
-/* week range */
-function weekRangeText(d=new Date()){
-  const mon = startOfISOWeek(d);
-  const sun = new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+6);
-  const opts={month:'short',day:'numeric'};
-  if (mon.getFullYear()===sun.getFullYear()) return `${mon.toLocaleDateString(undefined,opts)} – ${sun.toLocaleDateString(undefined,opts)}, ${sun.getFullYear()}`;
-  return `${mon.toLocaleDateString(undefined,opts)} ${mon.getFullYear()} – ${sun.toLocaleDateString(undefined,opts)} ${sun.getFullYear()}`;
-}
-
-/* build week columns */
-function buildWeekGrid(){
-  refs.weekGrid.innerHTML='';
-  const mon = startOfISOWeek(APP.date);
-  for (let i=0;i<7;i++){
-    const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i);
-    const dayKey = ymd(d);
-    const col = document.createElement('div'); col.className='day-col'; col.dataset.day=dayKey;
-    col.innerHTML = `<div class="day-header"><div>${DAYS[i]}</div><div class="small text-muted">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div></div><div class="small text-muted">${d.getFullYear()}</div><div class="task-list" aria-live="polite"></div>`;
-    // click to open timeline (simple open of tasks for that day)
-    col.addEventListener('click', (ev)=> {
-      if (ev.target.closest('.task')) return;
-      APP.date = d; APP.weekKey = getISOWeekKey(APP.date); renderHeaderAndDate(); renderTasksForDate(dayKey);
-    });
-    refs.weekGrid.appendChild(col);
-  }
-  // render tasks into columns
-  for (let i=0;i<7;i++){
-    const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i);
-    const dayKey = ymd(d);
-    renderTasksInColumn(dayKey);
-  }
-}
-
-/* render tasks list for a specific date (main daily list) */
-function renderTasksForDate(dateKey){
-  const list = refs.taskList;
-  list.innerHTML='';
-  const arr = APP.tasks[dateKey] || [];
-  if (APP.settings.autoSort) arr.sort((a,b)=> (a.time||'').localeCompare(b.time||'') || a.createdAt - b.createdAt);
-  if (!arr.length) { list.innerHTML = '<div class="small text-muted">No tasks for this day.</div>'; return; }
-  for (let i=0;i<arr.length;i++){
-    const t = arr[i];
-    const node = createTaskNode(t, dateKey, i);
-    list.appendChild(node);
-  }
-}
-
-/* render tasks inside week column */
-function renderTasksInColumn(dateKey){
-  const col = refs.weekGrid.querySelector(`.day-col[data-day="${dateKey}"]`);
-  if (!col) return;
-  const list = col.querySelector('.task-list');
-  list.innerHTML='';
-  const arr = APP.tasks[dateKey] || [];
-  if (APP.settings.autoSort) arr.sort((a,b)=> (a.time||'').localeCompare(b.time||'') || a.createdAt - b.createdAt);
-  if (!arr.length) { list.innerHTML = '<div class="small text-muted">No tasks</div>'; return; }
-  for (let i=0;i<arr.length;i++){
-    list.appendChild(createTaskNode(arr[i], dateKey, i));
-  }
-}
-
-/* create task DOM node */
-function createTaskNode(task, dateKey, idx){
-  const node = document.createElement('div'); node.className='task'; node.draggable=true; node.dataset.id=task.id; node.dataset.date=dateKey;
-  node.innerHTML = `<div class="time">${task.time || '—'}</div><div style="flex:1"><div class="title">${escapeHtml(task.title)}</div><div class="meta">${escapeHtml(task.notes||'')}</div></div><div class="chips"><button class="btn ghost" data-act="edit">✎</button><button class="btn ghost" data-act="dup">⤷</button><button class="btn ghost" data-act="del">🗑</button></div>`;
-  // drag events
-  node.addEventListener('dragstart',(e)=>{ node.classList.add('dragging'); e.dataTransfer.setData('text/task-id', task.id); e.dataTransfer.effectAllowed='move'; });
-  node.addEventListener('dragend',()=> node.classList.remove('dragging'));
-  // button actions
-  node.querySelector('[data-act="edit"]').addEventListener('click', (e)=> { e.stopPropagation(); openEditModal(task, dateKey); });
-  node.querySelector('[data-act="dup"]').addEventListener('click', (e)=> { e.stopPropagation(); duplicateTask(task, dateKey); });
-  node.querySelector('[data-act="del"]').addEventListener('click', (e)=> { e.stopPropagation(); deleteTask(task.id, dateKey); });
-  // touch accessibility: tap to edit
-  node.addEventListener('click', ()=> openEditModal(task, dateKey));
-  return node;
-}
-
-/* Add task */
-function addTaskToDate(dateKey, title, time, notes=''){
-  if (!title || !title.trim()) { toast('Task title required'); return; }
-  const t = { id: uid('t'), title: title.trim(), notes: notes||'', time: time||'', createdAt: Date.now(), updatedAt: Date.now(), complete:false };
-  APP.tasks[dateKey] = APP.tasks[dateKey] || []; APP.tasks[dateKey].push(t);
-  postChange();
-  renderTasksForDate(dateKey);
-  renderTasksInColumn(dateKey);
-}
-
-/* delete task */
-function deleteTask(id, dateKey){
-  if (!confirm('Delete task?')) return;
-  const arr = APP.tasks[dateKey] || [];
-  const idx = arr.findIndex(x=>x.id===id);
-  if (idx>=0){ snapshotUndo(); arr.splice(idx,1); postChange(); renderTasksForDate(dateKey); renderTasksInColumn(dateKey); }
-}
-
-/* duplicate */
-function duplicateTask(task, dateKey){
-  snapshotUndo();
-  const t = {...task, id: uid('t'), createdAt: Date.now()};
-  APP.tasks[dateKey].push(t); postChange(); renderTasksForDate(dateKey); renderTasksInColumn(dateKey);
-}
-
-/* edit modal */
-let editing = null;
-function openEditModal(task, dateKey){
-  editing = {task, dateKey};
-  refs.editTitle.value = task.title;
-  refs.editTime.value = task.time || '';
-  refs.editNotes.value = task.notes || '';
-  refs.editDay.innerHTML = Object.keys(APP.tasks).length ? generateDayOptions(task.dayKey || dateKey) : generateDayOptions(dateKey);
-  refs.editModal.classList.add('show'); refs.editModal.style.display='flex'; refs.editModal.setAttribute('aria-hidden','false');
-  refs.editTitle.focus();
-}
-function closeEditModal(){ refs.editModal.classList.remove('show'); refs.editModal.style.display='none'; refs.editModal.setAttribute('aria-hidden','true'); editing=null; }
-function saveEdit(){
-  if (!editing) return;
-  const {task, dateKey} = editing;
-  snapshotUndo();
-  const newTitle = refs.editTitle.value.trim() || task.title;
-  const newTime = refs.editTime.value || '';
-  const newNotes = refs.editNotes.value || '';
-  const newDay = refs.editDay.value;
-  // remove from original
-  const arr = APP.tasks[dateKey] || [];
-  const idx = arr.findIndex(x=>x.id===task.id);
-  if (idx>=0) arr.splice(idx,1);
-  const updated = {...task, title:newTitle, time:newTime, notes:newNotes, updatedAt:Date.now()};
-  APP.tasks[newDay] = APP.tasks[newDay] || []; APP.tasks[newDay].push(updated);
-  postChange();
-  renderTasksForDate(ymd(APP.date));
-  buildWeekGrid();
-  closeEditModal();
-}
-
-/* generate day options covering current week */
-function generateDayOptions(selectedDayKey){
-  const mon = startOfISOWeek(APP.date);
-  let opts='';
-  for (let i=0;i<7;i++){
-    const d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i); const k = ymd(d);
-    opts += `<option value="${k}" ${k===selectedDayKey?'selected':''}>${DAYS[i]} ${d.getMonth()+1}/${d.getDate()}</option>`;
-  }
-  return opts;
-}
-
-/* snapshot undo */
-function snapshotUndo(){
-  APP.undoStack = APP.undoStack || [];
-  const snap = JSON.stringify(APP.tasks);
-  APP.undoStack.push(snap);
-  if (APP.undoStack.length>20) APP.undoStack.shift();
-}
-function undo(){
-  const snap = APP.undoStack.pop();
-  if (snap){ APP.tasks = JSON.parse(snap); postChange(); renderTasksForDate(ymd(APP.date)); buildWeekGrid(); toast('Undone'); } else toast('Nothing to undo');
-}
-
-/* post-change saves and updates */
-function postChange(){
-  persistState();
-  renderHeaderAndDate();
-  saveTasksForWeek();
-}
-
-/* save tasks by weekKey and handle archives & weekly reset */
-function saveTasksForWeek(){
-  const wk = getISOWeekKey(APP.date);
-  storage.save(`${STORAGE_PREFIX}_week_${wk}`, APP.tasks);
-}
-
-/* auto-weekly reset (archive previous week if autoReset) */
-function runWeeklyResetCheck(){
-  setInterval(()=>{
-    const currentKey = getISOWeekKey(new Date());
-    if (currentKey !== APP.weekKey){
-      if (APP.settings.autoReset){
-        // archive previous week
-        storage.save(`${STORAGE_PREFIX}_archive_${APP.weekKey}`, {key:APP.weekKey, tasks:APP.tasks, archivedAt:Date.now()});
-        APP.archives.unshift(APP.weekKey);
-        if (APP.archives.length>100) APP.archives.pop();
-        storage.save(ARCHIVES_KEY, APP.archives);
-        // reset tasks for new week
-        APP.date = new Date();
-        APP.weekKey = currentKey;
-        APP.tasks = {}; persistState(); buildWeekGrid(); renderTasksForDate(ymd(APP.date));
-        toast('New week — previous week archived and tasks reset.');
-      } else {
-        APP.weekKey = currentKey;
-      }
-    }
-  }, 30_000);
-}
-
-/* templates */
-function populateTemplates(){
-  refs.templateSelect.innerHTML = '<option value="">Templates</option>';
-  const keys = Object.keys(APP.templates||{});
-  if (!keys.length) refs.templateSelect.innerHTML += '<option value="">No templates</option>';
-  for (const k of keys){ const id = encodeURIComponent(k); refs.templateSelect.innerHTML += `<option value="${id}">${k}</option>`; }
-  renderTemplatesArea();
-}
-function renderTemplatesArea(){
-  refs.templatesArea.innerHTML='';
-  for (const k of Object.keys(APP.templates||{})){
-    const el = document.createElement('div'); el.style.display='flex'; el.style.justifyContent='space-between'; el.style.alignItems='center'; el.style.marginBottom='6px';
-    el.innerHTML = `<div><strong>${k}</strong><div class="small text-muted">${APP.templates[k].length} items</div></div><div><button class="btn ghost" data-t="${encodeURIComponent(k)}">Apply</button><button class="btn ghost" data-del="${encodeURIComponent(k)}">Delete</button></div>`;
-    refs.templatesArea.appendChild(el);
-  }
-  // bind apply/delete
-  refs.templatesArea.querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click', (e)=>applyTemplate(decodeURIComponent(b.dataset.t))));
-  refs.templatesArea.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', (e)=>{ if (confirm('Delete template?')){ delete APP.templates[decodeURIComponent(b.dataset.del)]; storage.save(TEMPLATES_KEY, APP.templates); populateTemplates(); toast('Template deleted'); } }));
-}
-function saveNewTemplate(){
-  const name = refs.newTemplateName.value.trim(); const body = refs.newTemplateBody.value.trim();
-  if (!name || !body) { toast('Template name and body required'); return; }
-  const lines = body.split('\n').map(l=>l.trim()).filter(Boolean);
-  const items = lines.map(l=>{
-    const m = l.match(/^(\d{1,2}:\d{2})\s*[—-]\s*(.+)$/);
-    if (m) return {time:m[1], title:m[2]}; return {time:'', title:l};
-  });
-  APP.templates[name]=items; storage.save(TEMPLATES_KEY, APP.templates); refs.newTemplateName.value=''; refs.newTemplateBody.value=''; populateTemplates(); toast('Template saved');
-}
-function applyTemplate(name){
-  const decoded = decodeURIComponent(name);
-  if (!APP.templates[decoded]) { toast('Template missing'); return; }
-  const dayKey = ymd(APP.date);
-  snapshotUndo();
-  for (const it of APP.templates[decoded]){
-    const t = { id: uid('t'), title: it.title, notes:'', time: it.time || '', createdAt:Date.now(), updatedAt:Date.now(), complete:false };
-    APP.tasks[dayKey] = APP.tasks[dayKey] || []; APP.tasks[dayKey].push(t);
-  }
-  postChange(); renderTasksForDate(dayKey); buildWeekGrid();
-  toast(`Template "${decoded}" applied`);
-}
-
-/* generate uid */
-function uid(pref='id'){ return `${pref}_${Math.random().toString(36).slice(2,9)}`; }
-
-/* escape html helper */
-function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
-
-/* simple theme application */
-function populateThemeChips(){
-  refs.themeChips.innerHTML='';
-  for (const key of Object.keys(THEMES)){
-    const chip = document.createElement('div'); chip.className='theme-chip'; chip.title=key;
-    chip.innerHTML = `<div class="theme-preview" style="background:linear-gradient(90deg, ${THEMES[key]['--accent']||'#fff'}, ${THEMES[key]['--accent2']||'#000'})"></div><div class="small">${key}</div>`;
-    chip.addEventListener('click', ()=> { applyTheme(key); APP.settings.theme = key; storage.save(SETTINGS_KEY, APP.settings); toast('Theme applied'); });
-    refs.themeChips.appendChild(chip);
-  }
-}
-function applyTheme(name){
-  const t = THEMES[name] || THEMES['Midnight Glass'];
-  for (const k of Object.keys(t)) document.documentElement.style.setProperty(k, t[k]);
-  APP.settings.theme = name;
-  storage.save(SETTINGS_KEY, APP.settings);
-}
-
-/* restore audio settings from sessions if any */
-function restoreAudioSettings(){
-  // if last session had audio choice stored in sessions[0], apply sources
-  const last = APP.sessions && APP.sessions.length? APP.sessions[APP.sessions.length-1] : null;
-  if (last && last.binauralSrc) try { refs.binauralVol.value = last.binauralVol||0.7; refs.ambientVol.value = last.ambientVol||0.5; } catch(e){}
-}
-
-/* --------------------------
-   Reading Mode: audio & sessions
-   -------------------------- */
-let readingState = { running:false, startTs:null, intervalTimer:null, dingerTimer:null, nextRecallTimer:null, recallQueue:[], currentSessionId:null };
-const MS = 1000;
-
-/* audio controls */
-refs.binauralFile.addEventListener('change', (e)=> {
-  const f = e.target.files[0]; if (!f) return;
-  const url = URL.createObjectURL(f);
-  refs.binauralAudio.src = url; refs.binauralAudio.loop = true; refs.binauralAudio.load();
-  APP.sessions = APP.sessions || []; // persist mapping
-  persistState();
-  toast('Binaural track loaded (play to start)');
-});
-refs.ambientFile.addEventListener('change', (e)=> {
-  const f = e.target.files[0]; if (!f) return;
-  const url = URL.createObjectURL(f);
-  refs.ambientAudio.src = url; refs.ambientAudio.loop = true; refs.ambientAudio.load();
-  persistState(); toast('Ambient track loaded (play to start)');
-});
-
-refs.binauralPlay.addEventListener('click', async ()=>{
-  await playAudio(refs.binauralAudio, refs.binauralVol.value);
-  registerMediaSession();
-});
-refs.ambientPlay.addEventListener('click', async ()=>{
-  await playAudio(refs.ambientAudio, refs.ambientVol.value);
-  registerMediaSession();
-});
-
-/* play helper */
-async function playAudio(audioEl, vol){
-  try{
-    audioEl.volume = Number(vol);
-    await audioEl.play();
-    toast('Playing');
-  }catch(e){
-    toast('Playback blocked — interact with the page then try play.');
-  }
-}
-
-/* update volumes */
-refs.binauralVol.addEventListener('input', ()=>{ refs.binauralAudio.volume = Number(refs.binauralVol.value); persistState(); });
-refs.ambientVol.addEventListener('input', ()=>{ refs.ambientAudio.volume = Number(refs.ambientVol.value); persistState(); });
-
-/* Media Session integration */
-function registerMediaSession(){
-  try{
-    if ('mediaSession' in navigator){
-      navigator.mediaSession.metadata = new MediaMetadata({ title: 'MCIF Reading', artist: 'MCIF' });
-      navigator.mediaSession.setActionHandler('play', ()=>{ refs.binauralAudio.play().catch(()=>{}); refs.ambientAudio.play().catch(()=>{}); });
-      navigator.mediaSession.setActionHandler('pause', ()=>{ refs.binauralAudio.pause(); refs.ambientAudio.pause(); });
-    }
-  }catch(e){ /* ignore */ }
-}
-
-/* Reading session lifecycle */
-refs.startReadingBtn.addEventListener('click', ()=> startReadingSession());
-refs.stopReadingBtn.addEventListener('click', ()=> stopReadingSession());
-refs.dingerInterval.addEventListener('change', ()=>{}); // autosave later
-refs.recallMode.addEventListener('change', ()=>{}); refs.recallMin.addEventListener('change', ()=>{}); refs.recallMax.addEventListener('change', ()=>{});
-
-/* start reading */
-function startReadingSession(){
-  if (readingState.running){ toast('Already running'); return; }
-  // create session
-  const session = { id: uid('sess'), startedAt:Date.now(), summaries:[], binauralSrc: refs.binauralAudio.src||'', ambientSrc: refs.ambientAudio.src||'', binauralVol: refs.binauralVol.value, ambientVol: refs.ambientVol.value, recallMode: refs.recallMode.value, recallMin: Number(refs.recallMin.value), recallMax: Number(refs.recallMax.value), dingerInterval: Number(refs.dingerInterval.value), events:[] };
-  APP.sessions.unshift(session); storage.save(SESSIONS_KEY, APP.sessions);
-  readingState.currentSessionId = session.id;
-  readingState.running = true; readingState.startTs = Date.now();
-  // start audio if not playing
-  if (refs.binauralAudio.src && refs.binauralAudio.paused) refs.binauralAudio.play().catch(()=>{});
-  if (refs.ambientAudio.src && refs.ambientAudio.paused) refs.ambientAudio.play().catch(()=>{});
-  // start dinger loop
-  scheduleDinger(Number(refs.dingerInterval.value));
-  // schedule recalls
-  scheduleNextRecall();
-  toast('Reading session started');
-}
-
-/* stop reading */
-function stopReadingSession(){
-  if (!readingState.running) { toast('Not running'); return; }
-  // stop timers
-  if (readingState.dingerTimer) clearInterval(readingState.dingerTimer);
-  if (readingState.nextRecallTimer) clearTimeout(readingState.nextRecallTimer);
-  // mark session end
-  const sess = APP.sessions.find(s=>s.id===readingState.currentSessionId);
-  if (sess){ sess.endedAt = Date.now(); sess.duration = (sess.endedAt - sess.startedAt); storage.save(SESSIONS_KEY, APP.sessions); }
-  readingState = { running:false, startTs:null, intervalTimer:null, dingerTimer:null, nextRecallTimer:null, recallQueue:[], currentSessionId:null };
-  // pause audio if user wants?
-  // refs.binauralAudio.pause(); refs.ambientAudio.pause();
-  toast('Reading session stopped');
-}
-
-/* dinger */
-function scheduleDinger(mins){
-  if (readingState.dingerTimer) clearInterval(readingState.dingerTimer);
-  const ms = mins * 60 * 1000;
-  readingState.dingerTimer = setInterval(()=> {
-    playDinger();
-  }, ms);
-}
-function playDinger(){
-  // small beep using WebAudio (no external file)
-  try{
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(); const g = ctx.createGain();
-    o.type = 'sine'; o.frequency.value = 880;
-    g.gain.value = 0.0015; // soft
-    o.connect(g); g.connect(ctx.destination); o.start();
-    setTimeout(()=>{ o.stop(); ctx.close(); }, 120);
-  }catch(e){}
-  if (refs.vibrateDinger.checked && navigator.vibrate) navigator.vibrate(150);
-}
-
-/* recall scheduling */
-function scheduleNextRecall(){
-  if (readingState.nextRecallTimer) clearTimeout(readingState.nextRecallTimer);
-  const mode = refs.recallMode.value;
-  if (!readingState.running || mode==='off') return;
-  if (mode==='random'){
-    const min = Math.max(1, Number(refs.recallMin.value)); const max = Math.max(min, Number(refs.recallMax.value));
-    const mins = Math.floor(Math.random()*(max-min+1))+min;
-    readingState.nextRecallTimer = setTimeout(()=> triggerRecallPrompt(), mins*60*1000);
-  } else if (mode==='triple'){
-    // in triple mode we schedule 3 prompts: immediate-ish, mid, final
-    if (!readingState.recallQueue.length){
-      // schedule first after short delay (1-3 mins)
-      readingState.recallQueue = ['immediate','mid','final'];
-      readingState.nextRecallTimer = setTimeout(()=> triggerRecallPrompt(), 2*60*1000);
-    } else {
-      // schedule next after a longer interval
-      readingState.nextRecallTimer = setTimeout(()=> triggerRecallPrompt(), 8*60*1000);
-    }
-  }
-}
-
-/* prompt recall */
-function triggerRecallPrompt(){
-  if (!readingState.running) return;
-  const sess = APP.sessions.find(s=>s.id===readingState.currentSessionId);
-  if (!sess) return;
-  // create prompt UI (browser prompt for compactness)
-  if (refs.recallMode.value === 'random'){
-    const ans = prompt('Summary: Type a 1–2 sentence summary of what you just read.');
-    if (ans !== null){
-      sess.summaries.push({ts:Date.now(), text:ans});
-      storage.save(SESSIONS_KEY, APP.sessions);
-      toast('Summary saved');
-    }
-  } else if (refs.recallMode.value === 'triple'){
-    const stage = readingState.recallQueue.shift();
-    if (stage==='immediate'){
-      const ans = prompt('Immediate summary: Type a 1–2 sentence summary of what you just read.');
-      if (ans !== null){ sess.summaries.push({stage:'immediate',ts:Date.now(),text:ans}); storage.save(SESSIONS_KEY, APP.sessions); toast('Saved'); }
-      scheduleNextRecall();
-    } else if (stage==='mid'){
-      const ans = prompt('Mid summary: What did you summarize earlier? (brief)');
-      if (ans !== null){ sess.summaries.push({stage:'mid',ts:Date.now(),text:ans}); storage.save(SESSIONS_KEY, APP.sessions); toast('Saved'); }
-      scheduleNextRecall();
-    } else if (stage==='final'){
-      const ans = prompt('Final recall: What was the FIRST summary you wrote this session?');
-      if (ans !== null){ sess.summaries.push({stage:'final',ts:Date.now(),text:ans}); storage.save(SESSIONS_KEY, APP.sessions); toast('Saved'); }
-      // completed triple sequence
-      readingState.recallQueue = [];
-      scheduleNextRecall();
-    }
-  }
-}
-
-/* session log & export */
-refs.openSessionLog.addEventListener('click', ()=> {
-  const area = refs.sessionLogArea; area.innerHTML='';
-  for (const s of APP.sessions.slice(0,50)){
-    const el = document.createElement('div'); el.style.marginBottom='8px';
-    el.innerHTML = `<div><strong>Session ${s.id}</strong> — ${new Date(s.startedAt).toLocaleString()}${s.endedAt?(' — '+new Date(s.endedAt).toLocaleString()):''}</div><div class="small text-muted">Summaries: ${s.summaries?.length||0}</div>`;
-    for (const su of (s.summaries||[])) el.innerHTML += `<div style="margin-top:6px;padding:6px;border-radius:6px;background:rgba(255,255,255,0.01)">${new Date(su.ts).toLocaleTimeString()} — ${escapeHtml(su.text)}</div>`;
-    area.appendChild(el);
-  }
-  refs.logModal.classList.add('show'); refs.logModal.style.display='flex'; refs.logModal.setAttribute('aria-hidden','false');
-});
-refs.closeLogBtn.addEventListener('click', ()=> { refs.logModal.classList.remove('show'); refs.logModal.style.display='none'; refs.logModal.setAttribute('aria-hidden','true'); });
-
-refs.exportSessionLog.addEventListener('click', ()=>{
-  const data = JSON.stringify(APP.sessions, null, 2);
-  const url = 'data:text/json;charset=utf-8,'+encodeURIComponent(data);
-  const a = document.createElement('a'); a.href=url; a.download=`mcif_sessions_${new Date().toISOString()}.json`; document.body.appendChild(a); a.click(); a.remove();
-  toast('Sessions exported');
-});
-
-/* --------------------------
-   Media & background behavior notes
-   -------------------------- */
-/*
-  - Uses HTML5 audio + Media Session API to maximize chance of background playback.
-  - iOS Safari will continue audio when page plays and user locks screen or switches apps, but behavior can vary by iOS version.
-  - Users must interact (tap Play) to allow background play.
-*/
-
-/* --------------------------
-   Settings & themes
-   -------------------------- */
-refs.settingsBtn.addEventListener('click', ()=> { refs.settingsModal.classList.add('show'); refs.settingsModal.style.display='flex'; refs.settingsModal.setAttribute('aria-hidden','false'); });
-refs.closeSettings.addEventListener('click', ()=> { refs.settingsModal.classList.remove('show'); refs.settingsModal.style.display='none'; refs.settingsModal.setAttribute('aria-hidden','true'); });
-
-document.getElementById('saveNewTemplate').addEventListener('click', saveNewTemplate);
-refs.applyTemplateBtn.addEventListener('click', ()=> {
-  const v = refs.templateSelect.value; if (!v) { toast('Select a template first'); return; }
-  applyTemplate(v);
-});
-
-/* save & persistence on page unload */
-window.addEventListener('beforeunload', ()=> persistState());
-
-/* --------------------------
-   Helpers: event bindings & UI init
-   -------------------------- */
-function bindUI(){
-  refs.addTaskBtn.addEventListener('click', ()=> {
-    const key = ymd(APP.date); addTaskToDate(key, refs.taskInput.value, refs.timeInput.value); refs.taskInput.value=''; refs.timeInput.value=''; renderTasksForDate(key);
-  });
-  refs.todayBtn.addEventListener('click', ()=> { APP.date = new Date(); APP.weekKey = getISOWeekKey(APP.date); renderHeaderAndDate(); buildWeekGrid(); renderTasksForDate(ymd(APP.date)); });
-  refs.prevWeek.addEventListener('click', ()=> { APP.date.setDate(APP.date.getDate()-7); APP.weekKey=getISOWeekKey(APP.date); renderHeaderAndDate(); buildWeekGrid(); });
-  refs.nextWeek.addEventListener('click', ()=> { APP.date.setDate(APP.date.getDate()+7); APP.weekKey=getISOWeekKey(APP.date); renderHeaderAndDate(); buildWeekGrid(); });
-  document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
-  document.getElementById('deleteBtn').addEventListener('click', ()=>{ if (editing) deleteTask(editing.task.id, editing.dateKey); closeEditModal();});
-  // close edit modal on background click
-  document.querySelectorAll('.modal-backdrop').forEach(m=>m.addEventListener('click',(e)=>{ if (e.target===m) { m.classList.remove('show'); m.style.display='none'; m.setAttribute('aria-hidden','true'); } }));
-  // templates area apply & delete handled in populateTemplates
-  // keyboard: Cmd/Ctrl+Enter to add
-  document.addEventListener('keydown', (e)=> { if ((e.ctrlKey||e.metaKey) && e.key==='Enter') refs.addTaskBtn.click(); });
-}
-
-/* --------------------------
-   Utilities & final init
-   -------------------------- */
-function postInit(){
-  // build day select in edit modal
-  refs.editDay.innerHTML = generateDayOptions(ymd(APP.date));
-  // load tasks for current week
-  buildWeekGrid();
-  renderTasksForDate(ymd(APP.date));
-}
-
-/* generate day options helper (current week) */
-function generateDayOptions(curKey){
-  const mon = startOfISOWeek(APP.date);
-  let html=''; for (let i=0;i<7;i++){ const d = new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i); const k = ymd(d); html += `<option value="${k}" ${k===curKey?'selected':''}>${DAYS[i]} ${d.getMonth()+1}/${d.getDate()}</option>`; } return html;
-}
-
-/* small helper to save tasks and UI updates after manual change */
-function postChange(){ persistState(); renderHeaderAndDate(); buildWeekGrid(); renderTasksForDate(ymd(APP.date)); }
-
-/* Undo via window for power users */
-window.mcif = { APP, undo };
-
-/* run init */
-init();
-postInit();
-
-/* Weekly archive & other housekeeping is running in background via runWeeklyResetCheck */
-
-</script>
+    </main>
+    <footer>
+        Developed by Hayden Andrew Carr | Meta-Cognitive Intelligence Project
+    </footer>
+
+    <script src="workflow.js"></script>
 </body>
 </html>
