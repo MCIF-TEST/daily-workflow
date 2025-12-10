@@ -1,211 +1,284 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MCIF Task & Reading Interface</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Weekly Tasks — Recurring Planner</title>
 <style>
-    :root {
-        --primary-color: #4B6CB7;
-        --secondary-color: #182848;
-        --accent-color: #F9A826;
-        --bg-color: #F4F6F8;
-        --card-bg: #FFFFFF;
-        --font-family: 'Roboto', sans-serif;
-    }
+  :root{
+    --bg:#0f1720; --card:#0b1220; --muted:#9fb0bc; --text:#e6f6f6; --accent:#56d6b4;
+    --radius:12px; --gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#04121a 200%);color:var(--text);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:12px auto;padding:8px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#5fa8ff);display:grid;place-items:center;font-weight:800;color:#021416}
+  h1{margin:0;font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
 
-    body {
-        margin: 0;
-        font-family: var(--font-family);
-        background-color: var(--bg-color);
-        color: var(--secondary-color);
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-    }
+  /* form */
+  .card{background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:12px;border:1px solid rgba(255,255,255,0.03);margin-bottom:12px}
+  .row{display:flex;gap:8px;align-items:center}
+  input[type="text"]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);outline:none;font-size:15px}
+  .btn{padding:8px 12px;border-radius:10px;background:var(--accent);color:#021416;font-weight:700;border:none}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+  .days{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .day-toggle{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);cursor:pointer;color:var(--muted);font-weight:700}
 
-    header {
-        width: 100%;
-        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 1.5rem 2rem;
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: 1px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+  @media(max-width:720px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  .day-col{background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(0,0,0,0.03));border-radius:10px;padding:8px;min-height:140px;border:1px solid rgba(255,255,255,0.02)}
+  .day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .task-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
+  .task-title{flex:1;font-weight:700}
+  .small{font-size:12px;color:var(--muted)}
 
-    main {
-        width: 95%;
-        max-width: 1200px;
-        margin: 2rem auto;
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
+  /* controls */
+  .task-actions button{background:transparent;border:none;color:var(--muted);font-size:16px;padding:6px;border-radius:8px;cursor:pointer}
+  .task-actions button:hover{color:var(--text);background:rgba(255,255,255,0.02)}
 
-    .card {
-        background-color: var(--card-bg);
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-
-    .section-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--primary-color);
-    }
-
-    .workflow-step, .task-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        border-radius: 8px;
-        background-color: #E8EBF0;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .workflow-step:hover, .task-item:hover {
-        background-color: var(--accent-color);
-        color: white;
-    }
-
-    .workflow-step.completed, .task-item.completed {
-        background-color: #4BB543;
-        color: white;
-    }
-
-    .workflow-step span, .task-item span {
-        font-weight: 500;
-    }
-
-    button {
-        padding: 0.75rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 500;
-        color: white;
-        background-color: var(--primary-color);
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-        background-color: var(--accent-color);
-    }
-
-    footer {
-        width: 100%;
-        text-align: center;
-        padding: 1rem 0;
-        background-color: var(--secondary-color);
-        color: white;
-        font-size: 0.9rem;
-    }
-
-    @media (max-width: 768px) {
-        .workflow-step, .task-item {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        button {
-            width: 100%;
-        }
-    }
-
-    /* Reading mode panel */
-    #reading-mode {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    #reading-mode textarea {
-        width: 100%;
-        height: 150px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        padding: 1rem;
-        font-size: 1rem;
-        resize: vertical;
-    }
-
-    #reading-mode-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
+  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
 </style>
 </head>
 <body>
-<header>
-    MCIF Task & Reading Interface
-</header>
-
-<main>
-    <!-- Dashboard -->
-    <div class="card">
-        <div class="section-title">User Dashboard</div>
-        <div id="user-status">Welcome! Loading your tasks...</div>
-    </div>
-
-    <!-- Task List -->
-    <div class="card">
-        <div class="section-title">Task List</div>
-        <div id="task-container">
-            <!-- Tasks dynamically inserted by workflow.js -->
+  <div class="wrap" role="application">
+    <header>
+      <div class="brand">
+        <div class="logo">W</div>
+        <div>
+          <h1>Weekly Tasks</h1>
+          <div class="muted">Recurring tasks — repeat every week</div>
         </div>
-        <div id="task-controls">
-            <input type="text" id="new-task" placeholder="Enter new task..." />
-            <input type="time" id="task-time" />
-            <button id="add-task">Add Task</button>
-        </div>
-    </div>
+      </div>
+      <div class="muted" id="todayLabel"></div>
+    </header>
 
-    <!-- Reading Mode -->
-    <div class="card" id="reading-mode">
-        <div class="section-title">Reading Mode</div>
-        <textarea id="reading-content" placeholder="Paste or type your reading material here..."></textarea>
-        <div id="reading-mode-controls">
-            <button id="start-reading">Start Session</button>
-            <button id="stop-reading">Stop Session</button>
-            <button id="toggle-binaural">Toggle Binaural Beats</button>
-            <button id="set-dinger">Set 15-min Reminder</button>
-            <button id="ultimate-retention">Ultimate Retention Mode</button>
-        </div>
-    </div>
+    <!-- Add task card -->
+    <section class="card" aria-labelledby="addTaskTitle">
+      <div id="addTaskTitle" style="font-weight:900;margin-bottom:8px">Add recurring task</div>
+      <div class="row">
+        <input id="taskText" type="text" placeholder="Task title — e.g. 'Morning review'">
+        <button id="addBtn" class="btn">Add</button>
+        <button id="clearBtn" class="btn ghost">Clear All</button>
+      </div>
 
-    <!-- Workflow Controls -->
-    <div class="card">
-        <div class="section-title">Workflow Controls</div>
-        <button id="start-workflow">Start Workflow</button>
-        <button id="reset-workflow">Reset Workflow</button>
-    </div>
-</main>
+      <div class="days small" id="dayToggles" aria-label="Choose days">
+        <!-- day toggles added by JS -->
+      </div>
+      <div class="small muted" style="margin-top:8px">Tap days to assign the task (it will recur weekly).</div>
+    </section>
 
-<footer>
-    Developed by Hayden Andrew Carr | Meta-Cognitive Intelligence Project
-</footer>
+    <!-- Week grid -->
+    <section>
+      <div class="grid" id="weekGrid" aria-label="Week">
+        <!-- columns added by JS -->
+      </div>
+    </section>
 
-<script src="workflow.js"></script>
+    <footer>
+      Local-only • No account • Data saved to your browser
+    </footer>
+  </div>
+
+<script>
+/* Simple Weekly Recurring Tasks — Local-only
+   Features:
+   - Create tasks that recur weekly on selected day(s)
+   - Edit / delete tasks
+   - Mark complete for a day (completions tracked per date)
+   - Data persisted in localStorage under key 'weekly_tasks_v1'
+*/
+
+(() => {
+  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const STORAGE_KEY = 'weekly_tasks_v1';
+
+  // app state
+  let state = {
+    tasks: [], // { id, title, days: [0..6] }
+    completions: {} // {'YYYY-MM-DD': {taskId:true,...}}
+  };
+
+  // DOM refs
+  const todayLabel = document.getElementById('todayLabel');
+  const dayToggles = document.getElementById('dayToggles');
+  const taskText = document.getElementById('taskText');
+  const addBtn = document.getElementById('addBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const weekGrid = document.getElementById('weekGrid');
+
+  // util
+  const uid = (p='t') => p + '_' + Math.random().toString(36).slice(2,9);
+  const today = new Date();
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const dayIndexToday = () => ((new Date()).getDay() + 6) % 7; // Mon=0..Sun=6
+  const formatLongDate = d => d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+
+  // load/save
+  function load(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        state.tasks = parsed.tasks || [];
+        state.completions = parsed.completions || {};
+      }
+    } catch(e){ console.warn('load error', e); }
+  }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+  // init day toggles for add form
+  function initDayToggles(){
+    dayToggles.innerHTML = '';
+    for (let i=0;i<7;i++){
+      const b = document.createElement('button');
+      b.className = 'day-toggle';
+      b.type = 'button';
+      b.dataset.day = i;
+      b.textContent = DAYS[i];
+      b.addEventListener('click', ()=> b.classList.toggle('active'));
+      dayToggles.appendChild(b);
+    }
+  }
+
+  // get selected days from toggles
+  function selectedDays(){
+    return Array.from(dayToggles.children).filter(n=>n.classList.contains('active')).map(n=>Number(n.dataset.day));
+  }
+
+  // clear toggles
+  function clearDayToggles(){ Array.from(dayToggles.children).forEach(n=>n.classList.remove('active')); }
+
+  // add task
+  function addTask(){
+    const title = taskText.value.trim();
+    const days = selectedDays();
+    if (!title) { alert('Task title required'); return; }
+    if (!days.length) { alert('Choose at least one day'); return; }
+    const t = { id: uid(), title, days };
+    state.tasks.push(t);
+    save();
+    taskText.value = '';
+    clearDayToggles();
+    render();
+  }
+
+  // remove task
+  function deleteTask(id){
+    if (!confirm('Delete task?')) return;
+    state.tasks = state.tasks.filter(t=>t.id !== id);
+    // also remove completions references
+    for (const d in state.completions){ if (state.completions[d][id]) { delete state.completions[d][id]; } }
+    save(); render();
+  }
+
+  // edit task (simple prompt)
+  function editTask(id){
+    const t = state.tasks.find(x=>x.id===id);
+    if (!t) return;
+    const newTitle = prompt('Edit task title', t.title);
+    if (newTitle === null) return;
+    const daysStr = prompt('Comma list of weekdays (0=Mon ... 6=Sun). Current: ' + t.days.join(','), t.days.join(','));
+    if (daysStr === null) return;
+    const days = daysStr.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>=0 && n<=6);
+    if (!days.length){ alert('Need at least one day'); return; }
+    t.title = newTitle.trim();
+    t.days = days;
+    save(); render();
+  }
+
+  // toggle completion for date
+  function toggleComplete(dateKey, taskId){
+    state.completions[dateKey] = state.completions[dateKey] || {};
+    if (state.completions[dateKey][taskId]) delete state.completions[dateKey][taskId];
+    else state.completions[dateKey][taskId] = true;
+    save(); render();
+  }
+
+  // render week grid (current week starting Monday)
+  function render(){
+    // header date
+    todayLabel.textContent = formatLongDate(new Date());
+
+    weekGrid.innerHTML = '';
+    const base = startOfISOWeek(new Date()); // monday
+    for (let i=0;i<7;i++){
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
+      const key = ymd(d);
+      const col = document.createElement('div');
+      col.className = 'day-col';
+      col.innerHTML = `<div class="day-header"><div style="font-weight:900">${DAYS[i]}</div><div class="small">${d.getMonth()+1}/${d.getDate()}</div></div><div class="day-tasks" id="day-${key}"></div>`;
+      weekGrid.appendChild(col);
+
+      // find tasks that include this day index
+      const tasksForDay = state.tasks.filter(t => t.days.includes(i));
+      const container = col.querySelector('.day-tasks');
+      if (!tasksForDay.length) {
+        const nod = document.createElement('div'); nod.className='small muted'; nod.textContent='No tasks';
+        container.appendChild(nod);
+      } else {
+        for (const t of tasksForDay){
+          const item = document.createElement('div'); item.className='task-item';
+          // completed for this date?
+          const completed = Boolean(state.completions[key] && state.completions[key][t.id]);
+          item.innerHTML = `
+            <input type="checkbox" ${completed? 'checked':''} aria-label="complete" class="task-check" />
+            <div class="task-title" style="text-decoration:${completed?'line-through':''}">${escapeHtml(t.title)}</div>
+            <div class="task-actions">
+              <button data-act="edit" title="Edit">✎</button>
+              <button data-act="del" title="Delete">🗑</button>
+            </div>
+          `;
+          // checkbox toggles completion for that date
+          const chk = item.querySelector('.task-check');
+          chk.addEventListener('change', ()=> toggleComplete(key, t.id));
+          // actions
+          item.querySelector('[data-act="edit"]').addEventListener('click', ()=> editTask(t.id));
+          item.querySelector('[data-act="del"]').addEventListener('click', ()=> deleteTask(t.id));
+          container.appendChild(item);
+        }
+      }
+    }
+  }
+
+  // startOfISOWeek (Mon)
+  function startOfISOWeek(d = new Date()){
+    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = date.getDay(); // 0 Sun .. 6 Sat
+    const isoDay = (day + 6) % 7; // Mon=0..Sun=6
+    date.setDate(date.getDate() - isoDay);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+
+  // small helpers
+  function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // clear all data (for convenience)
+  function clearAll(){
+    if (!confirm('Clear all tasks and completions?')) return;
+    state.tasks = []; state.completions = {};
+    save(); render();
+  }
+
+  // wire up
+  function init(){
+    load();
+    initDayToggles();
+    render();
+
+    addBtn.addEventListener('click', addTask);
+    taskText.addEventListener('keydown', (e)=> { if ((e.key === 'Enter') && taskText.value.trim()) addTask(); });
+    clearBtn.addEventListener('click', clearAll);
+
+    // small UX: tap day toggle to toggle active visual
+    // (already wired in initDayToggles)
+  }
+
+  init();
+})();
+</script>
 </body>
 </html>
