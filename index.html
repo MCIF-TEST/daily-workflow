@@ -1,284 +1,209 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Weekly Tasks — Recurring Planner</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weekly Checklist</title>
+
 <style>
-  :root{
-    --bg:#0f1720; --card:#0b1220; --muted:#9fb0bc; --text:#e6f6f6; --accent:#56d6b4;
-    --radius:12px; --gap:10px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  }
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#04121a 200%);color:var(--text);-webkit-font-smoothing:antialiased}
-  .wrap{max-width:980px;margin:12px auto;padding:8px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#5fa8ff);display:grid;place-items:center;font-weight:800;color:#021416}
-  h1{margin:0;font-size:18px}
-  .muted{color:var(--muted);font-size:13px}
+    body {
+        font-family: Arial, sans-serif;
+        background: #0f1a24;
+        color: white;
+        margin: 0;
+        padding: 20px;
+    }
 
-  /* form */
-  .card{background:rgba(255,255,255,0.02);border-radius:var(--radius);padding:12px;border:1px solid rgba(255,255,255,0.03);margin-bottom:12px}
-  .row{display:flex;gap:8px;align-items:center}
-  input[type="text"]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);outline:none;font-size:15px}
-  .btn{padding:8px 12px;border-radius:10px;background:var(--accent);color:#021416;font-weight:700;border:none}
-  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
-  .days{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-  .day-toggle{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);cursor:pointer;color:var(--muted);font-weight:700}
+    h1 {
+        text-align: center;
+        margin-bottom: 25px;
+    }
 
-  /* grid */
-  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-  @media(max-width:720px){ .grid{grid-template-columns:repeat(2,1fr)} }
-  .day-col{background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(0,0,0,0.03));border-radius:10px;padding:8px;min-height:140px;border:1px solid rgba(255,255,255,0.02)}
-  .day-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-  .task-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.02);margin-bottom:6px}
-  .task-title{flex:1;font-weight:700}
-  .small{font-size:12px;color:var(--muted)}
+    .day {
+        background: #15232f;
+        padding: 15px;
+        margin-bottom: 18px;
+        border-radius: 10px;
+    }
 
-  /* controls */
-  .task-actions button{background:transparent;border:none;color:var(--muted);font-size:16px;padding:6px;border-radius:8px;cursor:pointer}
-  .task-actions button:hover{color:var(--text);background:rgba(255,255,255,0.02)}
+    .day h2 {
+        margin: 0 0 12px 0;
+        font-size: 20px;
+    }
 
-  footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+    .task {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 16px;
+        gap: 8px;
+    }
+
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+    }
+
+    .task input[type="text"] {
+        flex: 1;
+        background: #0b1620;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px;
+    }
+
+    .task input[type="number"] {
+        width: 70px;
+        background: #0b1620;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px;
+    }
+
+    .add-box {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+    }
+
+    .add-box input {
+        background: #0b1620;
+        color: white;
+        border: none;
+        padding: 8px;
+        border-radius: 6px;
+        flex: 1;
+    }
+
+    .add-box button {
+        background: #3ab4ff;
+        color: black;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 14px;
+        cursor: pointer;
+    }
 </style>
 </head>
+
 <body>
-  <div class="wrap" role="application">
-    <header>
-      <div class="brand">
-        <div class="logo">W</div>
-        <div>
-          <h1>Weekly Tasks</h1>
-          <div class="muted">Recurring tasks — repeat every week</div>
-        </div>
-      </div>
-      <div class="muted" id="todayLabel"></div>
-    </header>
 
-    <!-- Add task card -->
-    <section class="card" aria-labelledby="addTaskTitle">
-      <div id="addTaskTitle" style="font-weight:900;margin-bottom:8px">Add recurring task</div>
-      <div class="row">
-        <input id="taskText" type="text" placeholder="Task title — e.g. 'Morning review'">
-        <button id="addBtn" class="btn">Add</button>
-        <button id="clearBtn" class="btn ghost">Clear All</button>
-      </div>
+<h1>Weekly Checklist</h1>
 
-      <div class="days small" id="dayToggles" aria-label="Choose days">
-        <!-- day toggles added by JS -->
-      </div>
-      <div class="small muted" style="margin-top:8px">Tap days to assign the task (it will recur weekly).</div>
-    </section>
-
-    <!-- Week grid -->
-    <section>
-      <div class="grid" id="weekGrid" aria-label="Week">
-        <!-- columns added by JS -->
-      </div>
-    </section>
-
-    <footer>
-      Local-only • No account • Data saved to your browser
-    </footer>
-  </div>
+<div id="week"></div>
 
 <script>
-/* Simple Weekly Recurring Tasks — Local-only
-   Features:
-   - Create tasks that recur weekly on selected day(s)
-   - Edit / delete tasks
-   - Mark complete for a day (completions tracked per date)
-   - Data persisted in localStorage under key 'weekly_tasks_v1'
-*/
+// -------------------------------
+// DEFAULT WEEK STRUCTURE
+// -------------------------------
+const days = [
+    "Monday", "Tuesday", "Wednesday",
+    "Thursday", "Friday", "Saturday", "Sunday"
+];
 
-(() => {
-  const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const STORAGE_KEY = 'weekly_tasks_v1';
+// Each day starts with NO tasks.
+// They only change when YOU add or edit.
+const weekData = {
+    Monday: [],
+    Tuesday: [],
+    Wednesday: [],
+    Thursday: [],
+    Friday: [],
+    Saturday: [],
+    Sunday: []
+};
 
-  // app state
-  let state = {
-    tasks: [], // { id, title, days: [0..6] }
-    completions: {} // {'YYYY-MM-DD': {taskId:true,...}}
-  };
+// -------------------------------
+// RENDER THE WEEK
+// -------------------------------
+function renderWeek() {
+    const container = document.getElementById("week");
+    container.innerHTML = "";
 
-  // DOM refs
-  const todayLabel = document.getElementById('todayLabel');
-  const dayToggles = document.getElementById('dayToggles');
-  const taskText = document.getElementById('taskText');
-  const addBtn = document.getElementById('addBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const weekGrid = document.getElementById('weekGrid');
+    days.forEach(day => {
+        const box = document.createElement("div");
+        box.className = "day";
 
-  // util
-  const uid = (p='t') => p + '_' + Math.random().toString(36).slice(2,9);
-  const today = new Date();
-  const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  const dayIndexToday = () => ((new Date()).getDay() + 6) % 7; // Mon=0..Sun=6
-  const formatLongDate = d => d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+        // Day title
+        const header = document.createElement("h2");
+        header.textContent = day;
 
-  // load/save
-  function load(){
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        state.tasks = parsed.tasks || [];
-        state.completions = parsed.completions || {};
-      }
-    } catch(e){ console.warn('load error', e); }
-  }
-  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+        box.appendChild(header);
 
-  // init day toggles for add form
-  function initDayToggles(){
-    dayToggles.innerHTML = '';
-    for (let i=0;i<7;i++){
-      const b = document.createElement('button');
-      b.className = 'day-toggle';
-      b.type = 'button';
-      b.dataset.day = i;
-      b.textContent = DAYS[i];
-      b.addEventListener('click', ()=> b.classList.toggle('active'));
-      dayToggles.appendChild(b);
-    }
-  }
+        // Render tasks for that day
+        weekData[day].forEach((task, index) => {
+            const row = document.createElement("div");
+            row.className = "task";
 
-  // get selected days from toggles
-  function selectedDays(){
-    return Array.from(dayToggles.children).filter(n=>n.classList.contains('active')).map(n=>Number(n.dataset.day));
-  }
+            const check = document.createElement("input");
+            check.type = "checkbox";
 
-  // clear toggles
-  function clearDayToggles(){ Array.from(dayToggles.children).forEach(n=>n.classList.remove('active')); }
+            const text = document.createElement("input");
+            text.type = "text";
+            text.value = task.name;
+            text.oninput = () => {
+                task.name = text.value;
+            };
 
-  // add task
-  function addTask(){
-    const title = taskText.value.trim();
-    const days = selectedDays();
-    if (!title) { alert('Task title required'); return; }
-    if (!days.length) { alert('Choose at least one day'); return; }
-    const t = { id: uid(), title, days };
-    state.tasks.push(t);
-    save();
-    taskText.value = '';
-    clearDayToggles();
-    render();
-  }
+            const time = document.createElement("input");
+            time.type = "number";
+            time.value = task.time;
+            time.min = 1;
+            time.oninput = () => {
+                task.time = time.value;
+            };
 
-  // remove task
-  function deleteTask(id){
-    if (!confirm('Delete task?')) return;
-    state.tasks = state.tasks.filter(t=>t.id !== id);
-    // also remove completions references
-    for (const d in state.completions){ if (state.completions[d][id]) { delete state.completions[d][id]; } }
-    save(); render();
-  }
+            const minLabel = document.createElement("span");
+            minLabel.textContent = "min";
 
-  // edit task (simple prompt)
-  function editTask(id){
-    const t = state.tasks.find(x=>x.id===id);
-    if (!t) return;
-    const newTitle = prompt('Edit task title', t.title);
-    if (newTitle === null) return;
-    const daysStr = prompt('Comma list of weekdays (0=Mon ... 6=Sun). Current: ' + t.days.join(','), t.days.join(','));
-    if (daysStr === null) return;
-    const days = daysStr.split(',').map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>n>=0 && n<=6);
-    if (!days.length){ alert('Need at least one day'); return; }
-    t.title = newTitle.trim();
-    t.days = days;
-    save(); render();
-  }
+            row.appendChild(check);
+            row.appendChild(text);
+            row.appendChild(time);
+            row.appendChild(minLabel);
 
-  // toggle completion for date
-  function toggleComplete(dateKey, taskId){
-    state.completions[dateKey] = state.completions[dateKey] || {};
-    if (state.completions[dateKey][taskId]) delete state.completions[dateKey][taskId];
-    else state.completions[dateKey][taskId] = true;
-    save(); render();
-  }
+            box.appendChild(row);
+        });
 
-  // render week grid (current week starting Monday)
-  function render(){
-    // header date
-    todayLabel.textContent = formatLongDate(new Date());
+        // ----- ADD NEW TASK BOX -----
+        const addBox = document.createElement("div");
+        addBox.className = "add-box";
 
-    weekGrid.innerHTML = '';
-    const base = startOfISOWeek(new Date()); // monday
-    for (let i=0;i<7;i++){
-      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + i);
-      const key = ymd(d);
-      const col = document.createElement('div');
-      col.className = 'day-col';
-      col.innerHTML = `<div class="day-header"><div style="font-weight:900">${DAYS[i]}</div><div class="small">${d.getMonth()+1}/${d.getDate()}</div></div><div class="day-tasks" id="day-${key}"></div>`;
-      weekGrid.appendChild(col);
+        const newTaskInput = document.createElement("input");
+        newTaskInput.placeholder = "New task (ex: Reading)";
 
-      // find tasks that include this day index
-      const tasksForDay = state.tasks.filter(t => t.days.includes(i));
-      const container = col.querySelector('.day-tasks');
-      if (!tasksForDay.length) {
-        const nod = document.createElement('div'); nod.className='small muted'; nod.textContent='No tasks';
-        container.appendChild(nod);
-      } else {
-        for (const t of tasksForDay){
-          const item = document.createElement('div'); item.className='task-item';
-          // completed for this date?
-          const completed = Boolean(state.completions[key] && state.completions[key][t.id]);
-          item.innerHTML = `
-            <input type="checkbox" ${completed? 'checked':''} aria-label="complete" class="task-check" />
-            <div class="task-title" style="text-decoration:${completed?'line-through':''}">${escapeHtml(t.title)}</div>
-            <div class="task-actions">
-              <button data-act="edit" title="Edit">✎</button>
-              <button data-act="del" title="Delete">🗑</button>
-            </div>
-          `;
-          // checkbox toggles completion for that date
-          const chk = item.querySelector('.task-check');
-          chk.addEventListener('change', ()=> toggleComplete(key, t.id));
-          // actions
-          item.querySelector('[data-act="edit"]').addEventListener('click', ()=> editTask(t.id));
-          item.querySelector('[data-act="del"]').addEventListener('click', ()=> deleteTask(t.id));
-          container.appendChild(item);
-        }
-      }
-    }
-  }
+        const newTimeInput = document.createElement("input");
+        newTimeInput.type = "number";
+        newTimeInput.placeholder = "Time";
 
-  // startOfISOWeek (Mon)
-  function startOfISOWeek(d = new Date()){
-    const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const day = date.getDay(); // 0 Sun .. 6 Sat
-    const isoDay = (day + 6) % 7; // Mon=0..Sun=6
-    date.setDate(date.getDate() - isoDay);
-    date.setHours(0,0,0,0);
-    return date;
-  }
+        const btn = document.createElement("button");
+        btn.textContent = "+";
+        btn.onclick = () => {
+            if (!newTaskInput.value.trim()) return;
 
-  // small helpers
-  function escapeHtml(s=''){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+            weekData[day].push({
+                name: newTaskInput.value.trim(),
+                time: newTimeInput.value || 0
+            });
 
-  // clear all data (for convenience)
-  function clearAll(){
-    if (!confirm('Clear all tasks and completions?')) return;
-    state.tasks = []; state.completions = {};
-    save(); render();
-  }
+            renderWeek();
+        };
 
-  // wire up
-  function init(){
-    load();
-    initDayToggles();
-    render();
+        addBox.appendChild(newTaskInput);
+        addBox.appendChild(newTimeInput);
+        addBox.appendChild(btn);
 
-    addBtn.addEventListener('click', addTask);
-    taskText.addEventListener('keydown', (e)=> { if ((e.key === 'Enter') && taskText.value.trim()) addTask(); });
-    clearBtn.addEventListener('click', clearAll);
+        box.appendChild(addBox);
 
-    // small UX: tap day toggle to toggle active visual
-    // (already wired in initDayToggles)
-  }
+        container.appendChild(box);
+    });
+}
 
-  init();
-})();
+// Initial render
+renderWeek();
 </script>
+
 </body>
 </html>
