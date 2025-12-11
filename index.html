@@ -2,111 +2,102 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Weekly Checklist</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
     body {
-        font-family: Arial, sans-serif;
-        background: #0f1a24;
-        color: white;
-        margin: 0;
-        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        margin: 0; padding: 0;
+        background:#f5f5f7;
+        color:#111;
     }
-
-    h1 {
-        text-align: center;
-        margin-bottom: 25px;
-    }
-
-    .day {
-        background: #15232f;
+    h2 {
         padding: 15px;
-        margin-bottom: 18px;
-        border-radius: 10px;
+        margin:0;
+        background:#fff;
+        border-bottom:1px solid #ddd;
     }
-
-    .day h2 {
-        margin: 0 0 12px 0;
-        font-size: 20px;
+    .day {
+        background:#fff;
+        margin:10px;
+        padding:15px;
+        border-radius:10px;
+        box-shadow:0 2px 4px rgba(0,0,0,0.1);
     }
-
     .task {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-        font-size: 16px;
-        gap: 8px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:8px 0;
+        border-bottom:1px solid #eee;
     }
-
-    input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+    .task:last-child {
+        border-bottom:none;
     }
-
     .task input[type="text"] {
-        flex: 1;
-        background: #0b1620;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 6px;
+        width:50%;
+        border:none;
+        background:none;
+        font-size:16px;
     }
-
-    .task input[type="number"] {
-        width: 70px;
-        background: #0b1620;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        padding: 6px;
+    .time-input {
+        width:70px;
+        margin-right:10px;
+        border:1px solid #ccc;
+        border-radius:5px;
+        padding:3px;
     }
-
-    .add-box {
-        margin-top: 10px;
-        display: flex;
-        gap: 8px;
+    button {
+        padding:6px 12px;
+        border:none;
+        border-radius:8px;
+        font-size:14px;
+        background:#007aff;
+        color:white;
     }
-
-    .add-box input {
-        background: #0b1620;
-        color: white;
-        border: none;
-        padding: 8px;
-        border-radius: 6px;
-        flex: 1;
+    .delete-btn {
+        background:red;
     }
-
-    .add-box button {
-        background: #3ab4ff;
-        color: black;
-        font-weight: bold;
-        border: none;
-        border-radius: 6px;
-        padding: 10px 14px;
-        cursor: pointer;
+    .add-btn {
+        background:#34c759;
+        margin-top:10px;
+    }
+    #recurring-box {
+        background:#fff;
+        padding:15px;
+        margin:10px;
+        border-radius:10px;
+        box-shadow:0 2px 4px rgba(0,0,0,0.1);
     }
 </style>
 </head>
-
 <body>
 
-<h1>Weekly Checklist</h1>
+<h2>Weekly Checklist</h2>
 
-<div id="week"></div>
+<!-- Quick recurring task adder -->
+<div id="recurring-box">
+    <h3>Add Recurring Task</h3>
+    <input id="recurringName" type="text" placeholder="Task name">
+    <input id="recurringTime" type="text" placeholder="Time (e.g., 30 min)">
+    <select id="recurringDay">
+        <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+        <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+    </select>
+    <button onclick="addRecurring()">Add</button>
+</div>
+
+<!-- Days -->
+<div id="days"></div>
 
 <script>
-// -------------------------------
-// DEFAULT WEEK STRUCTURE
-// -------------------------------
-const days = [
-    "Monday", "Tuesday", "Wednesday",
-    "Thursday", "Friday", "Saturday", "Sunday"
+const dayNames = [
+    "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
 ];
 
-// Each day starts with NO tasks.
-// They only change when YOU add or edit.
-const weekData = {
+// Initialize empty lists
+const tasks = {
     Monday: [],
     Tuesday: [],
     Wednesday: [],
@@ -116,94 +107,67 @@ const weekData = {
     Sunday: []
 };
 
-// -------------------------------
-// RENDER THE WEEK
-// -------------------------------
-function renderWeek() {
-    const container = document.getElementById("week");
+// Render entire UI
+function render() {
+    const container = document.getElementById("days");
     container.innerHTML = "";
 
-    days.forEach(day => {
-        const box = document.createElement("div");
-        box.className = "day";
+    dayNames.forEach(day => {
+        const section = document.createElement("div");
+        section.className = "day";
 
-        // Day title
-        const header = document.createElement("h2");
-        header.textContent = day;
-
-        box.appendChild(header);
-
-        // Render tasks for that day
-        weekData[day].forEach((task, index) => {
-            const row = document.createElement("div");
-            row.className = "task";
-
-            const check = document.createElement("input");
-            check.type = "checkbox";
-
-            const text = document.createElement("input");
-            text.type = "text";
-            text.value = task.name;
-            text.oninput = () => {
-                task.name = text.value;
-            };
-
-            const time = document.createElement("input");
-            time.type = "number";
-            time.value = task.time;
-            time.min = 1;
-            time.oninput = () => {
-                task.time = time.value;
-            };
-
-            const minLabel = document.createElement("span");
-            minLabel.textContent = "min";
-
-            row.appendChild(check);
-            row.appendChild(text);
-            row.appendChild(time);
-            row.appendChild(minLabel);
-
-            box.appendChild(row);
+        let html = `<h3>${day}</h3>`;
+        tasks[day].forEach((task, i) => {
+            html += `
+            <div class="task">
+                <input type="checkbox">
+                <input type="text" value="${task.name}" onchange="editTask('${day}', ${i}, this.value)">
+                <input type="text" class="time-input" value="${task.time}" onchange="editTime('${day}', ${i}, this.value)">
+                <button class="delete-btn" onclick="deleteTask('${day}', ${i})">X</button>
+            </div>`;
         });
 
-        // ----- ADD NEW TASK BOX -----
-        const addBox = document.createElement("div");
-        addBox.className = "add-box";
-
-        const newTaskInput = document.createElement("input");
-        newTaskInput.placeholder = "New task (ex: Reading)";
-
-        const newTimeInput = document.createElement("input");
-        newTimeInput.type = "number";
-        newTimeInput.placeholder = "Time";
-
-        const btn = document.createElement("button");
-        btn.textContent = "+";
-        btn.onclick = () => {
-            if (!newTaskInput.value.trim()) return;
-
-            weekData[day].push({
-                name: newTaskInput.value.trim(),
-                time: newTimeInput.value || 0
-            });
-
-            renderWeek();
-        };
-
-        addBox.appendChild(newTaskInput);
-        addBox.appendChild(newTimeInput);
-        addBox.appendChild(btn);
-
-        box.appendChild(addBox);
-
-        container.appendChild(box);
+        html += `<button class="add-btn" onclick="addTask('${day}')">+ Add Task</button>`;
+        section.innerHTML = html;
+        container.appendChild(section);
     });
 }
 
-// Initial render
-renderWeek();
-</script>
+// Add empty task
+function addTask(day) {
+    tasks[day].push({name:"New Task", time:""});
+    render();
+}
 
+// Edit task name
+function editTask(day, index, value) {
+    tasks[day][index].name = value;
+}
+
+// Edit time field
+function editTime(day, index, value) {
+    tasks[day][index].time = value;
+}
+
+// Delete task
+function deleteTask(day, index) {
+    tasks[day].splice(index,1);
+    render();
+}
+
+// Quick add recurring task
+function addRecurring() {
+    const name = document.getElementById("recurringName").value.trim();
+    const time = document.getElementById("recurringTime").value.trim();
+    const day = document.getElementById("recurringDay").value;
+
+    if (name === "") return;
+
+    tasks[day].push({name, time});
+    render();
+}
+
+render();
+</script>
 </body>
 </html>
