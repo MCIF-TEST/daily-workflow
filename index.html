@@ -2,29 +2,58 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Weekly Checklist</title>
+<title>Non-Negotiables</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
     body {
         font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        margin: 0; padding: 0;
-        background:#f5f5f7;
-        color:#111;
+        margin: 0;
+        background: #f4f2ee;
+        color: #222;
     }
+
+    header {
+        background: #fff;
+        padding: 20px;
+        text-align: center;
+        border-bottom: 2px solid #d4c9b9;
+    }
+
+    header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 600;
+    }
+
+    header p {
+        margin: 5px 0 0 0;
+        font-size: 14px;
+        color: #555;
+        font-style: italic;
+    }
+
+    /* Cross symbol (subtle Christian theme) */
+    .cross {
+        margin-top: 8px;
+        font-size: 20px;
+        color: #8d7247;
+    }
+
     h2 {
-        padding: 15px;
-        margin:0;
-        background:#fff;
-        border-bottom:1px solid #ddd;
+        margin-left: 15px;
+        margin-top: 20px;
+        font-size: 20px;
     }
-    .day {
+
+    .section {
         background:#fff;
         margin:10px;
         padding:15px;
         border-radius:10px;
         box-shadow:0 2px 4px rgba(0,0,0,0.1);
     }
+
     .task {
         display:flex;
         align-items:center;
@@ -32,89 +61,140 @@
         padding:8px 0;
         border-bottom:1px solid #eee;
     }
-    .task:last-child {
-        border-bottom:none;
-    }
+
+    .task:last-child { border-bottom:none; }
+
     .task input[type="text"] {
         width:50%;
         border:none;
         background:none;
         font-size:16px;
     }
+
     .time-input {
         width:70px;
         margin-right:10px;
         border:1px solid #ccc;
-        border-radius:5px;
-        padding:3px;
+        border-radius:6px;
+        padding:4px;
     }
+
     button {
-        padding:6px 12px;
+        padding:6px 10px;
         border:none;
-        border-radius:8px;
+        border-radius:6px;
         font-size:14px;
         background:#007aff;
         color:white;
     }
-    .delete-btn {
-        background:red;
-    }
+
+    .delete-btn { background:#cc3a3a; }
+
     .add-btn {
         background:#34c759;
         margin-top:10px;
+        width:100%;
     }
-    #recurring-box {
-        background:#fff;
-        padding:15px;
-        margin:10px;
-        border-radius:10px;
-        box-shadow:0 2px 4px rgba(0,0,0,0.1);
+
+    .recurring-btn {
+        background:#8d7247;
+        color:white;
+        margin-left: 6px;
     }
 </style>
 </head>
 <body>
 
-<h2>Weekly Checklist</h2>
+<header>
+    <h1>Non-Negotiables</h1>
+    <p>“Whatever you do, do it for the glory of God.” — 1 Corinthians 10:31</p>
+    <div class="cross">✝</div>
+</header>
 
-<!-- Quick recurring task adder -->
-<div id="recurring-box">
-    <h3>Add Recurring Task</h3>
-    <input id="recurringName" type="text" placeholder="Task name">
-    <input id="recurringTime" type="text" placeholder="Time (e.g., 30 min)">
-    <select id="recurringDay">
-        <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
-        <option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
-    </select>
-    <button onclick="addRecurring()">Add</button>
-</div>
+<h2>Recurring Tasks</h2>
+<div id="recurring" class="section"></div>
 
-<!-- Days -->
+<h2>Your Week</h2>
 <div id="days"></div>
 
 <script>
+/* -----------------------
+       INITIAL DATA
+-------------------------*/
+
 const dayNames = [
     "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
 ];
 
-// Initialize empty lists
-const tasks = {
-    Monday: [],
-    Tuesday: [],
-    Wednesday: [],
-    Thursday: [],
-    Friday: [],
-    Saturday: [],
-    Sunday: []
-};
+let tasks = {};
+let recurringTasks = [];
 
-// Render entire UI
-function render() {
+/* -----------------------
+      LOAD FROM STORAGE
+-------------------------*/
+function loadData() {
+    tasks = JSON.parse(localStorage.getItem("weeklyTasks")) || {};
+    recurringTasks = JSON.parse(localStorage.getItem("recurringTasks")) || [];
+
+    // initialize blank days if first time
+    dayNames.forEach(day => {
+        if (!tasks[day]) tasks[day] = [];
+    });
+}
+
+/* -----------------------
+        SAVE DATA
+-------------------------*/
+function saveData() {
+    localStorage.setItem("weeklyTasks", JSON.stringify(tasks));
+    localStorage.setItem("recurringTasks", JSON.stringify(recurringTasks));
+}
+
+/* -----------------------
+       RENDERING UI
+-------------------------*/
+
+function renderAll() {
+    renderRecurring();
+    renderDays();
+}
+
+/* --- Recurring Tasks Section --- */
+function renderRecurring() {
+    const box = document.getElementById("recurring");
+    box.innerHTML = "";
+
+    recurringTasks.forEach((t, i) => {
+        const div = document.createElement("div");
+        div.className = "task";
+        div.innerHTML = `
+            <input type="text" value="${t.name}" onchange="editRecurring(${i}, this.value)">
+            <input type="text" class="time-input" value="${t.time}" onchange="editRecurringTime(${i}, this.value)">
+            <button class="delete-btn" onclick="deleteRecurring(${i})">X</button>
+        `;
+        box.appendChild(div);
+    });
+
+    // Add new recurring task button
+    const add = document.createElement("button");
+    add.className = "add-btn";
+    add.textContent = "+ Add Recurring Task";
+    add.onclick = () => {
+        recurringTasks.push({name:"New Task", time:""});
+        saveData();
+        renderRecurring();
+    };
+    box.appendChild(add);
+}
+
+/* --- Days Section --- */
+function renderDays() {
     const container = document.getElementById("days");
     container.innerHTML = "";
 
     dayNames.forEach(day => {
         const section = document.createElement("div");
-        section.className = "day";
+        section.className = "section";
 
         let html = `<h3>${day}</h3>`;
         tasks[day].forEach((task, i) => {
@@ -123,51 +203,91 @@ function render() {
                 <input type="checkbox">
                 <input type="text" value="${task.name}" onchange="editTask('${day}', ${i}, this.value)">
                 <input type="text" class="time-input" value="${task.time}" onchange="editTime('${day}', ${i}, this.value)">
+                <button onclick="copyToRecurring('${day}', ${i})" class="recurring-btn">↻</button>
                 <button class="delete-btn" onclick="deleteTask('${day}', ${i})">X</button>
             </div>`;
         });
 
-        html += `<button class="add-btn" onclick="addTask('${day}')">+ Add Task</button>`;
+        html += `
+        <button class="add-btn" onclick="addTask('${day}')">+ Add Task</button>
+        <button class="add-btn" style="background:#8d7247;" onclick="quickAddRecurring('${day}')">
+            + Add Recurring Task Here
+        </button>
+        `;
+
         section.innerHTML = html;
         container.appendChild(section);
     });
 }
 
-// Add empty task
+/* -----------------------
+        TASK LOGIC
+-------------------------*/
+
 function addTask(day) {
     tasks[day].push({name:"New Task", time:""});
-    render();
+    saveData();
+    renderDays();
 }
 
-// Edit task name
 function editTask(day, index, value) {
     tasks[day][index].name = value;
+    saveData();
 }
 
-// Edit time field
 function editTime(day, index, value) {
     tasks[day][index].time = value;
+    saveData();
 }
 
-// Delete task
 function deleteTask(day, index) {
     tasks[day].splice(index,1);
-    render();
+    saveData();
+    renderDays();
 }
 
-// Quick add recurring task
-function addRecurring() {
-    const name = document.getElementById("recurringName").value.trim();
-    const time = document.getElementById("recurringTime").value.trim();
-    const day = document.getElementById("recurringDay").value;
+/* -----------------------
+     RECURRING LOGIC
+-------------------------*/
 
-    if (name === "") return;
-
-    tasks[day].push({name, time});
-    render();
+function editRecurring(index, value) {
+    recurringTasks[index].name = value;
+    saveData();
 }
 
-render();
+function editRecurringTime(index, value) {
+    recurringTasks[index].time = value;
+    saveData();
+}
+
+function deleteRecurring(index) {
+    recurringTasks.splice(index,1);
+    saveData();
+    renderRecurring();
+}
+
+function quickAddRecurring(day) {
+    recurringTasks.forEach(t => {
+        tasks[day].push({name:t.name, time:t.time});
+    });
+    saveData();
+    renderDays();
+}
+
+/* Copy a specific task into recurring list */
+function copyToRecurring(day, index) {
+    const t = tasks[day][index];
+    recurringTasks.push({name: t.name, time: t.time});
+    saveData();
+    renderRecurring();
+}
+
+/* -----------------------
+      INIT APP
+-------------------------*/
+loadData();
+renderAll();
 </script>
+
 </body>
 </html>
